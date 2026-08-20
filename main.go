@@ -1,12 +1,11 @@
-// Golang project template
+// Telegram bot service
 //
-//	@title			Project API
+//	@title			Telegram Bot API
 //	@version		1.0.0
-//	@description	Project API documentation
+//	@description	Telegram bot service API
 //
-//	@contact.name	API Support
-//	@contact.url	https://github.com/capcom6
-//	@contact.email	i@capcom.me
+//	@contact.name	005-bot
+//	@contact.url	https://github.com/005-bot/tg-bot-go
 //
 //	@license.name	Apache 2.0
 //	@license.url	http://www.apache.org/licenses/LICENSE-2.0.html
@@ -19,7 +18,7 @@ import (
 	"runtime"
 	"strconv"
 
-	"github.com/capcom6/go-project-template/internal"
+	"github.com/005-bot/tg-bot-go/internal"
 	"github.com/go-core-fx/healthfx"
 	"github.com/samber/lo"
 )

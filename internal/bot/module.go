@@ -1,8 +1,8 @@
 package bot
 
 import (
-	"github.com/capcom6/go-project-template/internal/bot/handler"
-	"github.com/capcom6/go-project-template/internal/bot/handlers/start"
+	"github.com/005-bot/tg-bot-go/internal/bot/handler"
+	"github.com/005-bot/tg-bot-go/internal/bot/handlers/start"
 	"github.com/go-core-fx/logger"
 	"github.com/go-core-fx/telegofx"
 	"github.com/mymmrac/telego"

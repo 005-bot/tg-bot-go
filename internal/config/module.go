@@ -1,10 +1,9 @@
 package config
 
 import (
-	"github.com/capcom6/go-project-template/internal/example"
 	"github.com/go-core-fx/fiberfx"
 	"github.com/go-core-fx/fiberfx/openapi"
-	"github.com/go-core-fx/sqlfx"
+	"github.com/go-core-fx/redisfx"
 	"github.com/go-core-fx/telegofx"
 	"go.uber.org/fx"
 )
@@ -30,23 +29,15 @@ func Module() fx.Option {
 			},
 			func(cfg Config) telegofx.Config {
 				return telegofx.Config{
-					Token: cfg.Telegram.Token,
+					Token:    cfg.Telegram.Token,
+					ProxyURL: cfg.Telegram.ProxyURL,
 				}
 			},
-			func(cfg Config) sqlfx.Config {
-				return sqlfx.Config{
-					URL:             cfg.Database.URL,
-					ConnMaxIdleTime: cfg.Database.ConnMaxIdleTime,
-					ConnMaxLifetime: cfg.Database.ConnMaxLifetime,
-					MaxOpenConns:    cfg.Database.MaxOpenConns,
-					MaxIdleConns:    cfg.Database.MaxIdleConns,
+			func(cfg Config) redisfx.Config {
+				return redisfx.Config{
+					URL: cfg.Redis.URL,
 				}
 			},
 		),
-		fx.Provide(func(cfg Config) example.Config {
-			return example.Config{
-				Example: cfg.Example.Example,
-			}
-		}),
 	)
 }

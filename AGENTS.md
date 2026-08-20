@@ -51,3 +51,16 @@
 - GoReleaser v2 for linux/windows/darwin, CGO_ENABLED=0
 - Go 1.25+
 - Docker images pushed to ghcr.io on PR and release
+
+## Development Notes (Wave 1)
+- telego validates bot token format at creation with regex `^\d+:[\w-]{35}$` (exactly 35 [\w-] chars after colon); boot/smoke checks must use a format-valid dummy token (e.g. 123456:abcdefghijklmnopqrstuvwxyzABCDEFGHI) or the fx graph fails before the server binds
+- koanf env provider (go-core-fx/config) includes empty-valued env vars and unmarshals with WeaklyTypedInput=true, so ADMIN__TELEGRAM_ID="" decodes to 0 without error (Python crashed on int("") - Go is more robust)
+- go-core-fx/healthfx auto-registers /health (200 JSON status) via healthfx.Module() + health.NewHandler - no route code needed
+- DetectResourceType uses substring matching and fails on declined RU forms (e.g. "теплоснабжения" != "теплоснабжение"): consumers must match base forms or extend the matcher
+- encoding/json emits empty []time.Time as null and non-omitempty fields as null; apis-go Outage schema pins streets:null and period:null when nil
+- streets.db extraction rule: byte-copy + MD5 verification (10072cee7eb84361125cbdaf76559093) is the parity gate; regenerate never, copy always
+- Empty/punctuation street input passes the Unicode cleanName step (regex yields empty) and surfaces as ErrNoMatch from Normalize, not at the clean step
+- go mod tidy after dropping bun/goose/mysql wiring removes the unused module deps automatically; a zero-dependency module keeps an empty tracked go.sum
+- Template Makefile BINARY_NAME=basename($PWD) and .goreleaser .ProjectName templating auto-adapt to a renamed repo - no edits needed when repurposing the template
+- go-core-fx/redisfx resolves via go mod tidy to v0.0.0-20251029094515-c9e3d82dfaa2 (same pin as monitor-go)
+- Wave-1 boundary: tg-bot-go consumes neither apis-go nor address-parser-go yet (no replace directives); library consumption and redisfx runtime wiring land in wave 2 (TASK-005/006)
