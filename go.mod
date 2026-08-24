@@ -3,8 +3,11 @@ module github.com/005-bot/tg-bot-go
 go 1.25.7
 
 require (
+	github.com/005-bot/apis-go v0.0.1
+	github.com/alicebob/miniredis/v2 v2.38.0
 	github.com/go-core-fx/config v0.1.0
 	github.com/go-core-fx/fiberfx v0.5.1
+	github.com/go-core-fx/fxutil v0.0.2
 	github.com/go-core-fx/healthfx v0.1.0
 	github.com/go-core-fx/logger v0.0.1
 	github.com/go-core-fx/redisfx v0.0.0-20251029094515-c9e3d82dfaa2
@@ -12,6 +15,7 @@ require (
 	github.com/go-core-fx/validatorfx v0.0.2
 	github.com/gofiber/fiber/v2 v2.52.14
 	github.com/mymmrac/telego v1.11.2
+	github.com/redis/go-redis/v9 v9.21.0
 	github.com/samber/lo v1.53.0
 	github.com/swaggo/swag v1.16.6
 	github.com/urfave/cli/v3 v3.10.1
@@ -31,10 +35,8 @@ require (
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/clipperhouse/uax29/v2 v2.7.0 // indirect
 	github.com/cloudwego/base64x v0.1.7 // indirect
-	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/fsnotify/fsnotify v1.10.1 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.13 // indirect
-	github.com/go-core-fx/fxutil v0.0.2 // indirect
 	github.com/go-openapi/jsonpointer v1.0.0 // indirect
 	github.com/go-openapi/jsonreference v1.0.0 // indirect
 	github.com/go-openapi/spec v0.22.6 // indirect
@@ -73,14 +75,14 @@ require (
 	github.com/prometheus/client_model v0.6.2 // indirect
 	github.com/prometheus/common v0.69.0 // indirect
 	github.com/prometheus/procfs v0.21.1 // indirect
-	github.com/redis/go-redis/v9 v9.14.1 // indirect
-	github.com/rogpeppe/go-internal v1.14.1 // indirect
 	github.com/swaggo/files/v2 v2.0.2 // indirect
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/valyala/fastjson v1.6.10 // indirect
+	github.com/yuin/gopher-lua v1.1.1 // indirect
 	go.opentelemetry.io/otel v1.44.0 // indirect
 	go.opentelemetry.io/otel/trace v1.44.0 // indirect
+	go.uber.org/atomic v1.11.0 // indirect
 	go.uber.org/dig v1.19.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.5 // indirect

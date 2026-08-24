@@ -6,10 +6,13 @@ import (
 
 	"github.com/005-bot/tg-bot-go/internal/bot"
 	"github.com/005-bot/tg-bot-go/internal/config"
+	"github.com/005-bot/tg-bot-go/internal/listener"
 	"github.com/005-bot/tg-bot-go/internal/server"
+	"github.com/005-bot/tg-bot-go/internal/storage"
 	"github.com/go-core-fx/fiberfx"
 	"github.com/go-core-fx/healthfx"
 	"github.com/go-core-fx/logger"
+	"github.com/go-core-fx/redisfx"
 	"github.com/go-core-fx/telegofx"
 	"github.com/go-core-fx/validatorfx"
 	"github.com/urfave/cli/v3"
@@ -45,7 +48,7 @@ func run(ctx context.Context, version healthfx.Version) error {
 		// httpfx.Module(),
 		// openaifx.Module(),
 		// openrouterfx.Module(),
-		// redisfx.Module(),
+		redisfx.Module(),
 		// sqlfx.Module(),
 		// sqlxfx.Module(),
 		telegofx.Module(true),
@@ -57,6 +60,8 @@ func run(ctx context.Context, version healthfx.Version) error {
 		// db.Module(),
 		server.Module(),
 		bot.Module(),
+		storage.Module(),
+		listener.Module(),
 		//
 		// BUSINESS MODULES
 		fx.Supply(version),

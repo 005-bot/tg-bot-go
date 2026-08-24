@@ -64,3 +64,16 @@
 - Template Makefile BINARY_NAME=basename($PWD) and .goreleaser .ProjectName templating auto-adapt to a renamed repo - no edits needed when repurposing the template
 - go-core-fx/redisfx resolves via go mod tidy to v0.0.0-20251029094515-c9e3d82dfaa2 (same pin as monitor-go)
 - Wave-1 boundary: tg-bot-go consumes neither apis-go nor address-parser-go yet (no replace directives); library consumption and redisfx runtime wiring land in wave 2 (TASK-005/006)
+
+## Development Notes (Wave 2)
+- Filter JSON parity with pydantic requires SetEscapeHTML(false) - Go's default JSON encoding escapes <,>,&
+- Workspace members (tagless libs) resolve via go.work WITHOUT require lines; a versioned require of a tagless member poisons the workspace build (go fetches member go.mod at that version; unknown revision)
+- Dangling requires of removed-tag workspace libs in ANY member's go.mod poison the whole go.work graph for all modules
+- Go toolchain fetches workspace-member go.mod/zip at the required version even in workspace mode; `use` only overrides package source - tagless shared libs need cache-planted .mod/.zip + go.work.sum entries (machine-local; CI portability is the TASK-014 open question)
+- apis-go domain package is at the module ROOT: import path github.com/005-bot/apis-go (package name domain), NOT /domain
+- go-redis v9 PubSub.ReceiveMessage/Receive block on raw conn reads; ctx passed to Subscribe is NOT bound to connection lifetime - cancellation needs a goroutine+select wrapper
+- fxutil.RegisterRunnable[T]() returns a void callback for fx.Invoke; using it in fx.Provide fails with 'must provide at least one non-error type'
+- miniredis v2.38 lacks Restart(); simulate a Redis restart by Close() + StartAddr(sameAddr)
+- golangci-lint v2.13 fails in workspace mode (directory prefix ... does not contain modules listed in go.work); use per-package runs or GOWORK=off + CI-mode
+- go work sync silently drops requires on workspace members while they are unresolvable
+- go-redis Client.Subscribe never returns an error (discarded inside); subscription failures surface only via Receive/ReceiveMessage
