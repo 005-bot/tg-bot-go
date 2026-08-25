@@ -77,3 +77,17 @@
 - golangci-lint v2.13 fails in workspace mode (directory prefix ... does not contain modules listed in go.work); use per-package runs or GOWORK=off + CI-mode
 - go work sync silently drops requires on workspace members while they are unresolvable
 - go-redis Client.Subscribe never returns an error (discarded inside); subscription failures surface only via Receive/ReceiveMessage
+
+## Development Notes (Wave 3)
+- telego v1.11.2 telegohandler.Predicate is ctx-first: func(ctx context.Context, update telego.Update) bool
+- telego v1.11.2 has no th.Command; command predicates are th.AnyCommand/th.CommandEqual using strict regexp requiring a command word after '/'
+- fx v1.24 has no implicit interface binding: expose concrete types via explicit adapter providers (e.g. func(*Reply) handler.Sender)
+- fx.Private constructor results are invisible to providers in other fx.Module scopes; cross-module consumers force removing fx.Private
+- fx.New executes fx.Invoke during construction: blocking network calls in an invoke prevent the server from binding; startup Telegram calls (setMyCommands) must be async
+- telegofx.Bot.Updates() is receive-only; tests create their own channel + th.NewBotHandler(bot.Bot, ch) wrapped as &telegofx.Router{BotHandler: bh}
+- apis-go/format exposes DateRU/Dates (not FormatDateRU); verify actual shared API names before wrapping
+- strings.NewReplacer replaces in one pass: escaped output (&lt;) is never re-processed - matches aiogram html.quote single-pass semantics incl. double-escaping literal entities
+- aiogram RedisStorage parity: keys {prefix}:fsm:{chat}:{user}:state|data, redis TTL = -1 (no expiry); miniredis asserts both
+- golangci-lint v2 stale parallel-run lock at $TMPDIR/golangci-lint.lock survives pkill; subsequent runs hang until the lock file is removed
+- exhaustruct (repo config) requires full struct literals for telego non-Params types (ReplyKeyboardMarkup, KeyboardButton, BotCommand, ChatID); test files are excluded
+- User added real tags v0.0.1 in apis-go and address-parser-go (replacing the tagless state) and updated monitor-go + tg-bot-go go.mod requires to v0.0.1 - v0.0.1 requires are now resolvable locally

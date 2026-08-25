@@ -6,6 +6,7 @@ import (
 
 	"github.com/005-bot/tg-bot-go/internal/bot"
 	"github.com/005-bot/tg-bot-go/internal/config"
+	"github.com/005-bot/tg-bot-go/internal/fsm"
 	"github.com/005-bot/tg-bot-go/internal/listener"
 	"github.com/005-bot/tg-bot-go/internal/server"
 	"github.com/005-bot/tg-bot-go/internal/storage"
@@ -61,6 +62,7 @@ func run(ctx context.Context, version healthfx.Version) error {
 		server.Module(),
 		bot.Module(),
 		storage.Module(),
+		fsm.Module(),
 		listener.Module(),
 		//
 		// BUSINESS MODULES

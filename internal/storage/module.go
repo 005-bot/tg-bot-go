@@ -11,7 +11,7 @@ func Module() fx.Option {
 		"storage",
 		logger.WithNamedLogger("storage"),
 		fx.Provide(
-			NewService, fx.Private,
+			NewService,
 		),
 	)
 }

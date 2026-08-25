@@ -1,6 +1,8 @@
 package config
 
 import (
+	"github.com/005-bot/tg-bot-go/internal/bot"
+	"github.com/005-bot/tg-bot-go/internal/fsm"
 	"github.com/005-bot/tg-bot-go/internal/listener"
 	"github.com/005-bot/tg-bot-go/internal/storage"
 	"github.com/go-core-fx/fiberfx"
@@ -35,6 +37,11 @@ func Module() fx.Option {
 					ProxyURL: cfg.Telegram.ProxyURL,
 				}
 			},
+			func(cfg Config) bot.Config {
+				return bot.Config{
+					AdminID: int64(cfg.Admin.TelegramID),
+				}
+			},
 			func(cfg Config) redisfx.Config {
 				return redisfx.Config{
 					URL: cfg.Redis.URL,
@@ -42,6 +49,11 @@ func Module() fx.Option {
 			},
 			func(cfg Config) storage.Config {
 				return storage.Config{
+					Prefix: cfg.Redis.Prefix,
+				}
+			},
+			func(cfg Config) fsm.Config {
+				return fsm.Config{
 					Prefix: cfg.Redis.Prefix,
 				}
 			},
