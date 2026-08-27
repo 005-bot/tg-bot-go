@@ -7,6 +7,8 @@ import (
 
 	address "github.com/005-bot/address-parser-go"
 	"github.com/005-bot/tg-bot-go/internal/bot/handler"
+	"github.com/005-bot/tg-bot-go/internal/bot/handlers/feedback"
+	"github.com/005-bot/tg-bot-go/internal/bot/handlers/filter"
 	"github.com/005-bot/tg-bot-go/internal/bot/handlers/help"
 	"github.com/005-bot/tg-bot-go/internal/bot/handlers/start"
 	"github.com/005-bot/tg-bot-go/internal/bot/handlers/stop"
@@ -44,6 +46,8 @@ func Module() fx.Option {
 			fx.Annotate(start.New, fx.ResultTags(`group:"handlers"`)),
 			fx.Annotate(stop.New, fx.ResultTags(`group:"handlers"`)),
 			fx.Annotate(help.New, fx.ResultTags(`group:"handlers"`)),
+			fx.Annotate(filter.New, fx.ResultTags(`group:"handlers"`)),
+			fx.Annotate(feedback.New, fx.ResultTags(`group:"handlers"`)),
 		),
 		fx.Invoke(
 			fx.Annotate(

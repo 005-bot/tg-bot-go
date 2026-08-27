@@ -91,3 +91,13 @@
 - golangci-lint v2 stale parallel-run lock at $TMPDIR/golangci-lint.lock survives pkill; subsequent runs hang until the lock file is removed
 - exhaustruct (repo config) requires full struct literals for telego non-Params types (ReplyKeyboardMarkup, KeyboardButton, BotCommand, ChatID); test files are excluded
 - User added real tags v0.0.1 in apis-go and address-parser-go (replacing the tagless state) and updated monitor-go + tg-bot-go go.mod requires to v0.0.1 - v0.0.1 requires are now resolvable locally
+
+## Development Notes (Wave 4)
+- fx v1.24 fx.Private results are invisible to sibling fx.Module scopes; cross-module consumers (e.g. notifier consuming listener.Service) must drop fx.Private on the providing constructor
+- telego v1.11.2 API errors are *telegoapi.Error with ErrorCode field, wrapped via 'api: %w'; 403 detection for forbidden-unsubscribe uses errors.As(*telegoapi.Error) && ErrorCode == 403
+- strings.ToUpper after HTML quoting uppercases entities too (&lt; -> &LT;) - aiogram .upper() parity quirk; Telegram accepts case-insensitive HTML entities
+- address-parser-go Normalize of any DB original street name returns confidence exactly 1.0 (exactMap hit), so confirmation-keyboard taps subscribe immediately
+- Wave-4 deviation (documented): outage broadcast handles non-forbidden send errors log-and-continue per user (Python aborts the whole batch); 403 path matches Python exactly (unsubscribe + continue)
+- Truncation budget: max = 4096 - runeCount(suffix) - 1 (ellipsis) - 2 (newlines), clamped at 0; rune-slicing never splits Cyrillic/emoji; golden test asserts total 4096 runes + valid UTF-8
+- golangci-lint with GOWORK=off cannot resolve workspace-only deps (address-parser-go absent from tg-bot-go go.mod); per-package workspace-mode runs are the workaround
+- zsh treats bare '===' as command-path expansion; quote it or avoid as echo separator in shell commands

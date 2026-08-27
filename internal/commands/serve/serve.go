@@ -8,6 +8,7 @@ import (
 	"github.com/005-bot/tg-bot-go/internal/config"
 	"github.com/005-bot/tg-bot-go/internal/fsm"
 	"github.com/005-bot/tg-bot-go/internal/listener"
+	"github.com/005-bot/tg-bot-go/internal/notifier"
 	"github.com/005-bot/tg-bot-go/internal/server"
 	"github.com/005-bot/tg-bot-go/internal/storage"
 	"github.com/go-core-fx/fiberfx"
@@ -64,6 +65,7 @@ func run(ctx context.Context, version healthfx.Version) error {
 		storage.Module(),
 		fsm.Module(),
 		listener.Module(),
+		notifier.Module(),
 		//
 		// BUSINESS MODULES
 		fx.Supply(version),
