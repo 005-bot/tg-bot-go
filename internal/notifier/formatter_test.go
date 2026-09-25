@@ -12,21 +12,13 @@ import (
 
 const ellipsis = "…"
 
-func strPtr(s string) *string {
-	return &s
-}
-
-func resourcePtr(rt apidev.ResourceType) *apidev.ResourceType {
-	return &rt
-}
-
 // sampleOutage is the fixture outage: cold water, one street with a
 // building, a repair reason and two UTC dates.
 func sampleOutage() apidev.Outage {
 	return apidev.Outage{
 		Area: "Тест",
 		OrganizationInfo: apidev.OrganizationInfo{
-			ResourceType: resourcePtr(apidev.ResourceTypeColdWater),
+			ResourceType: new(apidev.ResourceTypeColdWater),
 			Resource:     "ХВС",
 			Organization: "Тестовая",
 			Phones:       []string{"+7 111"},
@@ -61,14 +53,14 @@ func TestFormatOutage_ResourceEmojiPerType(t *testing.T) {
 		raw       string
 		wantEmoji string
 	}{
-		{name: "electricity", res: resourcePtr(apidev.ResourceTypeElectricity), raw: "ХВС", wantEmoji: "⚡️"},
-		{name: "gas", res: resourcePtr(apidev.ResourceTypeGas), raw: "ХВС", wantEmoji: "🔥"},
-		{name: "cold water", res: resourcePtr(apidev.ResourceTypeColdWater), raw: "ХВС", wantEmoji: "❄️🚰"},
-		{name: "hot water", res: resourcePtr(apidev.ResourceTypeHotWater), raw: "ХВС", wantEmoji: "🌡️🚰"},
-		{name: "heating", res: resourcePtr(apidev.ResourceTypeHeating), raw: "ХВС", wantEmoji: "♨️"},
+		{name: "electricity", res: new(apidev.ResourceTypeElectricity), raw: "ХВС", wantEmoji: "⚡️"},
+		{name: "gas", res: new(apidev.ResourceTypeGas), raw: "ХВС", wantEmoji: "🔥"},
+		{name: "cold water", res: new(apidev.ResourceTypeColdWater), raw: "ХВС", wantEmoji: "❄️🚰"},
+		{name: "hot water", res: new(apidev.ResourceTypeHotWater), raw: "ХВС", wantEmoji: "🌡️🚰"},
+		{name: "heating", res: new(apidev.ResourceTypeHeating), raw: "ХВС", wantEmoji: "♨️"},
 		{name: "nil resource type falls back to resource", res: nil, raw: "ХВС", wantEmoji: "(ХВС)"},
 		{name: "unknown resource type falls back to resource",
-			res: resourcePtr(apidev.ResourceType("Тест")), raw: "Тест", wantEmoji: "(Тест)"},
+			res: new(apidev.ResourceType("Тест")), raw: "Тест", wantEmoji: "(Тест)"},
 	}
 
 	for _, tt := range tests {
@@ -114,7 +106,7 @@ func TestFormatOutage_EmptyPeriod(t *testing.T) {
 func TestFormatOutage_QuotesStreetsAndReason(t *testing.T) {
 	o := apidev.Outage{
 		OrganizationInfo: apidev.OrganizationInfo{
-			ResourceType: resourcePtr(apidev.ResourceTypeElectricity),
+			ResourceType: new(apidev.ResourceTypeElectricity),
 		},
 		Details: apidev.OutageDetails{
 			Streets: []apidev.Street{{Name: "ул. Ленина <1> & 2"}},
@@ -178,7 +170,7 @@ func TestFormatOutage_TruncatesStreetsAtRuneBoundary(t *testing.T) {
 func TestFormatOutage_ClampsBudgetAtZero(t *testing.T) {
 	o := apidev.Outage{
 		OrganizationInfo: apidev.OrganizationInfo{
-			ResourceType: resourcePtr(apidev.ResourceTypeElectricity),
+			ResourceType: new(apidev.ResourceTypeElectricity),
 		},
 		Details: apidev.OutageDetails{
 			Streets: []apidev.Street{{Name: "ул. Ленина"}},

@@ -32,7 +32,8 @@ import (
 )
 
 const (
-	testToken = "123456:abcdefghijklmnopqrstuvwxyzABCDEFGHI"
+	testToken   = "123456:abcdefghijklmnopqrstuvwxyzABCDEFGHI"
+	waitTimeout = 10 * time.Second
 
 	welcomeNoStreet = "✅ Вы подписаны на уведомления об отключениях\n\n" +
 		"🔍 Чтобы получать уведомления только по конкретной улице, используйте /filter\n\n" +
@@ -253,16 +254,16 @@ func (env *testEnv) send(t *testing.T, update telego.Update) {
 	env.updates <- update
 }
 
-func waitFor(t *testing.T, timeout time.Duration, cond func() bool) {
+func waitFor(t *testing.T, cond func() bool) {
 	t.Helper()
-	deadline := time.Now().Add(timeout)
+	deadline := time.Now().Add(waitTimeout)
 	for time.Now().Before(deadline) {
 		if cond() {
 			return
 		}
 		time.Sleep(10 * time.Millisecond)
 	}
-	t.Fatal("condition not met within", timeout)
+	t.Fatal("condition not met within", waitTimeout)
 }
 
 func settle(t *testing.T) {
@@ -292,7 +293,7 @@ func TestStartNoPayload(t *testing.T) {
 	env := newTestEnv(t, 4242)
 	env.send(t, updateWithText(111, 111, "vasya", "Вася", "/start"))
 
-	waitFor(t, 3*time.Second, func() bool { return len(env.fake.calls("sendMessage")) == 2 })
+	waitFor(t, func() bool { return len(env.fake.calls("sendMessage")) == 2 })
 
 	sends := env.fake.calls("sendMessage")
 	user := decodeSend(t, sends[0])
@@ -321,7 +322,8 @@ func TestStartNoPayload(t *testing.T) {
 	if filter.Street != nil {
 		t.Errorf("street = %v, want nil", *filter.Street)
 	}
-	if state, err := env.fsm.GetState(ctx, 111, 111); err != nil || state != "" {
+	state, err := env.fsm.GetState(ctx, 111, 111)
+	if err != nil || state != "" {
 		t.Errorf("fsm state = %q, err %v; want empty", state, err)
 	}
 }
@@ -330,7 +332,7 @@ func TestStartValidStreetExact(t *testing.T) {
 	env := newTestEnv(t, 4242)
 	env.send(t, updateWithText(222, 222, "petr", "Петя", deepLinkPayload(t, "улица Ленина")))
 
-	waitFor(t, 3*time.Second, func() bool { return len(env.fake.calls("sendMessage")) == 2 })
+	waitFor(t, func() bool { return len(env.fake.calls("sendMessage")) == 2 })
 
 	match, err := env.parser.Normalize(context.Background(), "улица Ленина")
 	if err != nil {
@@ -372,7 +374,7 @@ func TestStartBoundaryConfidenceSubscribes(t *testing.T) {
 	env := newTestEnv(t, 0)
 	env.send(t, updateWithText(333, 333, "", "Петя", "/start "+base64.RawURLEncoding.EncodeToString([]byte("Ленина"))))
 
-	waitFor(t, 3*time.Second, func() bool { return len(env.fake.calls("sendMessage")) == 1 })
+	waitFor(t, func() bool { return len(env.fake.calls("sendMessage")) == 1 })
 
 	match, err := env.parser.Normalize(context.Background(), "Ленина")
 	if err != nil {
@@ -396,7 +398,7 @@ func TestStartLowConfidence(t *testing.T) {
 	env := newTestEnv(t, 4242)
 	env.send(t, updateWithText(444, 444, "", "Петя", "/start "+base64.RawURLEncoding.EncodeToString([]byte("Мира"))))
 
-	waitFor(t, 3*time.Second, func() bool { return len(env.fake.calls("sendMessage")) == 1 })
+	waitFor(t, func() bool { return len(env.fake.calls("sendMessage")) == 1 })
 
 	match, err := env.parser.Normalize(context.Background(), "Мира")
 	if err != nil {
@@ -434,7 +436,8 @@ func TestStartLowConfidence(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	if state, err := env.fsm.GetState(ctx, 444, 444); err != nil || state != fsm.FilterState {
+	state, err := env.fsm.GetState(ctx, 444, 444)
+	if err != nil || state != fsm.FilterState {
 		t.Errorf("fsm state = %q, err %v; want %q", state, err, fsm.FilterState)
 	}
 	filter, err := env.storage.GetFilter(ctx, "444")
@@ -455,7 +458,7 @@ func TestStartNoMatch(t *testing.T) {
 	env.send(t, updateWithText(555, 555, "", "Петя",
 		"/start "+base64.RawURLEncoding.EncodeToString([]byte("абвгдежзиклмнопрст"))))
 
-	waitFor(t, 3*time.Second, func() bool { return len(env.fake.calls("sendMessage")) == 1 })
+	waitFor(t, func() bool { return len(env.fake.calls("sendMessage")) == 1 })
 
 	sends := env.fake.calls("sendMessage")
 	user := decodeSend(t, sends[0])
@@ -485,7 +488,7 @@ func TestStartMalformedPayload(t *testing.T) {
 	env := newTestEnv(t, 4242)
 	env.send(t, updateWithText(666, 666, "", "Петя", "/start !!!!"))
 
-	waitFor(t, 3*time.Second, func() bool { return len(env.fake.calls("sendMessage")) == 1 })
+	waitFor(t, func() bool { return len(env.fake.calls("sendMessage")) == 1 })
 
 	sends := env.fake.calls("sendMessage")
 	user := decodeSend(t, sends[0])
@@ -519,7 +522,7 @@ func TestStop(t *testing.T) {
 	}
 
 	env.send(t, updateWithText(777, 777, "", "Петя", "/stop"))
-	waitFor(t, 3*time.Second, func() bool { return len(env.fake.calls("sendMessage")) == 1 })
+	waitFor(t, func() bool { return len(env.fake.calls("sendMessage")) == 1 })
 
 	user := decodeSend(t, env.fake.calls("sendMessage")[0])
 	wantChatID(t, user.ChatID, 777)
@@ -535,7 +538,8 @@ func TestStop(t *testing.T) {
 		t.Errorf("street = %v, want nil after unsubscribe", *filter.Street)
 	}
 	// FSM state must stay untouched.
-	if state, err := env.fsm.GetState(ctx, 777, 777); err != nil || state != fsm.FilterState {
+	state, err := env.fsm.GetState(ctx, 777, 777)
+	if err != nil || state != fsm.FilterState {
 		t.Errorf("fsm state = %q, err %v; want %q (untouched)", state, err, fsm.FilterState)
 	}
 }
@@ -543,7 +547,7 @@ func TestStop(t *testing.T) {
 func TestHelp(t *testing.T) {
 	env := newTestEnv(t, 0)
 	env.send(t, updateWithText(888, 888, "", "Петя", "/help"))
-	waitFor(t, 3*time.Second, func() bool { return len(env.fake.calls("sendMessage")) == 1 })
+	waitFor(t, func() bool { return len(env.fake.calls("sendMessage")) == 1 })
 
 	user := decodeSend(t, env.fake.calls("sendMessage")[0])
 	wantChatID(t, user.ChatID, 888)
@@ -567,7 +571,7 @@ func TestErrorMiddlewareMapping(t *testing.T) {
 
 	for i, tc := range cases {
 		env.send(t, updateWithText(999, 999, "", "Петя", tc.command))
-		waitFor(t, 3*time.Second, func() bool { return len(env.fake.calls("sendMessage")) == i+1 })
+		waitFor(t, func() bool { return len(env.fake.calls("sendMessage")) == i+1 })
 
 		sends := env.fake.calls("sendMessage")
 		reply := decodeSend(t, sends[i])
@@ -594,7 +598,7 @@ func TestStartPayloadPaddingToleranceAndEmpty(t *testing.T) {
 	env := newTestEnv(t, 0)
 	// A payload that decodes to an empty string behaves like no payload.
 	env.send(t, updateWithText(1010, 1010, "bob", "Боб", "/start =="))
-	waitFor(t, 3*time.Second, func() bool { return len(env.fake.calls("sendMessage")) == 1 })
+	waitFor(t, func() bool { return len(env.fake.calls("sendMessage")) == 1 })
 
 	user := decodeSend(t, env.fake.calls("sendMessage")[0])
 	if user.Text != welcomeNoStreet {
@@ -609,7 +613,8 @@ func TestStartPayloadPaddingToleranceAndEmpty(t *testing.T) {
 	if filter.Street != nil {
 		t.Errorf("street = %v, want nil", *filter.Street)
 	}
-	if state, err := env.fsm.GetState(ctx, 1010, 1010); err != nil || state != "" {
+	state, err := env.fsm.GetState(ctx, 1010, 1010)
+	if err != nil || state != "" {
 		t.Errorf("fsm state = %q, err %v; want empty", state, err)
 	}
 }

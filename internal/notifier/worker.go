@@ -31,7 +31,12 @@ type Worker struct {
 
 // NewWorker creates the broadcast worker. events delivers outages as they
 // arrive; in the fx graph it is wired to listener.Service.Events.
-func NewWorker(bot *telegofx.Bot, storageSvc *storage.Service, listenerSvc *listener.Service, logger *zap.Logger) *Worker {
+func NewWorker(
+	bot *telegofx.Bot,
+	storageSvc *storage.Service,
+	listenerSvc *listener.Service,
+	logger *zap.Logger,
+) *Worker {
 	return &Worker{
 		bot:        bot.Bot,
 		storageSvc: storageSvc,

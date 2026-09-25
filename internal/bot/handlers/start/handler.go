@@ -21,6 +21,10 @@ import (
 	"go.uber.org/zap"
 )
 
+const minSubscribeConfidence = 0.85
+
+var errInvalidUTF8 = errors.New("invalid utf-8")
+
 // Handler handles the /start command.
 type Handler struct {
 	logger      *zap.Logger
@@ -64,63 +68,97 @@ func (h *Handler) handleStart(ctx *th.Context, update telego.Update) error {
 
 	payload, err := decodeStartPayload(commandArgs(msg.Text))
 	if err != nil {
-		return h.reply.Send(ctx, msg.Chat.ID, "🚨 Системная ошибка - наша команда уведомлена")
+		if sendErr := h.reply.Send(ctx, msg.Chat.ID, "🚨 Системная ошибка - наша команда уведомлена"); sendErr != nil {
+			return fmt.Errorf("send start error: %w", sendErr)
+		}
+		return nil
 	}
 
-	if err := h.storage.Subscribe(ctx, userID, nil); err != nil {
+	if err = h.storage.Subscribe(ctx, userID, nil); err != nil {
 		return fmt.Errorf("subscribe user %s: %w", userID, err)
 	}
 
-	if payload != "" {
-		match, err := h.parseAndSubscribe(ctx, msg, payload)
-		if err != nil {
-			return err
-		}
-		if match == nil {
-			return nil
-		}
-		return h.finishStart(ctx, msg, match)
+	if payload == "" {
+		return h.finishStart(ctx, msg, nil)
 	}
 
-	return h.finishStart(ctx, msg, nil)
+	match, handled, err := h.parseAndSubscribe(ctx, msg, payload)
+	if err != nil {
+		return err
+	}
+	if handled {
+		return nil
+	}
+	return h.finishStart(ctx, msg, match)
 }
 
 // parseAndSubscribe normalizes a street name and either subscribes with its
-// original name or asks for clarification. A nil match without error means
-// the handler already replied and the flow must stop (Python parity).
-func (h *Handler) parseAndSubscribe(ctx context.Context, msg *telego.Message, value string) (*address.Match, error) {
+// original name or asks for clarification. A handled result means the handler
+// already replied and the flow must stop (Python parity).
+func (h *Handler) parseAndSubscribe(
+	ctx context.Context,
+	msg *telego.Message,
+	value string,
+) (*address.Match, bool, error) {
 	parsed, err := h.parser.Normalize(ctx, strings.TrimSpace(value))
 	if errors.Is(err, address.ErrNoMatch) {
 		if stateErr := h.fsm.SetState(ctx, msg.Chat.ID, msg.From.ID, fsm.FilterState); stateErr != nil {
-			return nil, fmt.Errorf("set fsm state: %w", stateErr)
+			return nil, false, fmt.Errorf("set fsm state: %w", stateErr)
 		}
 		if sendErr := h.reply.Send(
 			ctx,
 			msg.Chat.ID,
 			"⚠️ Не удалось определить улицу!\n\nПожалуйста, укажите *только название улицы*, например:\n- Ленина\n- Мира",
 		); sendErr != nil {
-			return nil, sendErr
+			return nil, false, fmt.Errorf("send no-match prompt: %w", sendErr)
 		}
-		return nil, nil
+		return nil, true, nil
 	}
 	if err != nil {
-		return nil, fmt.Errorf("normalize street %q: %w", value, err)
+		return nil, false, fmt.Errorf("normalize street %q: %w", value, err)
 	}
 
-	if parsed.Confidence < 0.85 {
+	if parsed.Confidence < minSubscribeConfidence {
 		if stateErr := h.fsm.SetState(ctx, msg.Chat.ID, msg.From.ID, fsm.FilterState); stateErr != nil {
-			return nil, fmt.Errorf("set fsm state: %w", stateErr)
+			return nil, false, fmt.Errorf("set fsm state: %w", stateErr)
 		}
 		markup := &telego.ReplyKeyboardMarkup{
 			Keyboard: [][]telego.KeyboardButton{
-				{{Text: parsed.Name, IconCustomEmojiID: "", Style: ""}},
-				{{Text: "Отмена", IconCustomEmojiID: "", Style: ""}},
+				{
+					{
+						Text:              parsed.Name,
+						IconCustomEmojiID: "",
+						Style:             "",
+						RequestUsers:      nil,
+						RequestChat:       nil,
+						RequestManagedBot: nil,
+						RequestContact:    false,
+						RequestLocation:   false,
+						RequestPoll:       nil,
+						WebApp:            nil,
+					},
+				},
+				{
+					{
+						Text:              "Отмена",
+						IconCustomEmojiID: "",
+						Style:             "",
+						RequestUsers:      nil,
+						RequestChat:       nil,
+						RequestManagedBot: nil,
+						RequestContact:    false,
+						RequestLocation:   false,
+						RequestPoll:       nil,
+						WebApp:            nil,
+					},
+				},
 			},
 			IsPersistent:          false,
 			ResizeKeyboard:        true,
 			OneTimeKeyboard:       true,
 			InputFieldPlaceholder: "",
 			Selective:             false,
+			ForceReply:            false,
 		}
 		if sendErr := h.reply.SendWithKeyboard(
 			ctx,
@@ -131,16 +169,16 @@ func (h *Handler) parseAndSubscribe(ctx context.Context, msg *telego.Message, va
 			),
 			markup,
 		); sendErr != nil {
-			return nil, sendErr
+			return nil, false, fmt.Errorf("send confirmation prompt: %w", sendErr)
 		}
-		return nil, nil
+		return nil, true, nil
 	}
 
 	userID := strconv.FormatInt(msg.From.ID, 10)
-	if err := h.storage.Subscribe(ctx, userID, &parsed.Name); err != nil {
-		return nil, fmt.Errorf("subscribe street for user %s: %w", userID, err)
+	if err = h.storage.Subscribe(ctx, userID, &parsed.Name); err != nil {
+		return nil, false, fmt.Errorf("subscribe street for user %s: %w", userID, err)
 	}
-	return parsed, nil
+	return parsed, false, nil
 }
 
 // finishStart sends the welcome message and notifies the admin about the
@@ -156,10 +194,13 @@ func (h *Handler) finishStart(ctx context.Context, msg *telego.Message, match *a
 	text := fmt.Sprintf("%s%s\n\nℹ️ Источник информации об отключениях: https://005красноярск.рф", base, details)
 
 	if err := h.reply.Send(ctx, msg.Chat.ID, text); err != nil {
-		return err
+		return fmt.Errorf("send welcome: %w", err)
 	}
 	h.logger.Info("user subscribed", zap.Int64("user_id", msg.From.ID))
-	return h.notificator.NewUser(ctx, msg.From)
+	if err := h.notificator.NewUser(ctx, msg.From); err != nil {
+		return fmt.Errorf("notify admin: %w", err)
+	}
+	return nil
 }
 
 // commandArgs extracts the arguments group of a command message.
@@ -183,7 +224,7 @@ func decodeStartPayload(args string) (string, error) {
 		return "", fmt.Errorf("decode start payload: %w", err)
 	}
 	if !utf8.Valid(raw) {
-		return "", fmt.Errorf("decode start payload: invalid utf-8")
+		return "", fmt.Errorf("decode start payload: %w", errInvalidUTF8)
 	}
 	return string(raw), nil
 }

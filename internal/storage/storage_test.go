@@ -27,10 +27,6 @@ func newTestService(t *testing.T) (*storage.Service, *miniredis.Miniredis) {
 	return svc, mr
 }
 
-func strPtr(s string) *string {
-	return &s
-}
-
 func TestSubscribe_ExactBytes(t *testing.T) {
 	svc, mr := newTestService(t)
 	ctx := context.Background()
@@ -43,7 +39,7 @@ func TestSubscribe_ExactBytes(t *testing.T) {
 		t.Errorf("Subscribe(nil) stored %q, want %q", got, `{"street":null}`)
 	}
 
-	if err := svc.Subscribe(ctx, "user-2", strPtr("Ленина")); err != nil {
+	if err := svc.Subscribe(ctx, "user-2", new("Ленина")); err != nil {
 		t.Fatalf("Subscribe(street) error: %v", err)
 	}
 	got = mr.HGet(testPrefix+":filters", "user-2")
@@ -56,7 +52,7 @@ func TestUnsubscribe(t *testing.T) {
 	svc, mr := newTestService(t)
 	ctx := context.Background()
 
-	if err := svc.Subscribe(ctx, "user-1", strPtr("Ленина")); err != nil {
+	if err := svc.Subscribe(ctx, "user-1", new("Ленина")); err != nil {
 		t.Fatalf("Subscribe error: %v", err)
 	}
 	if err := svc.Unsubscribe(ctx, "user-1"); err != nil {
@@ -100,7 +96,7 @@ func TestGetFilter_Value(t *testing.T) {
 	svc, _ := newTestService(t)
 	ctx := context.Background()
 
-	if err := svc.Subscribe(ctx, "user-1", strPtr("Советская")); err != nil {
+	if err := svc.Subscribe(ctx, "user-1", new("Советская")); err != nil {
 		t.Fatalf("Subscribe error: %v", err)
 	}
 
@@ -117,7 +113,7 @@ func TestService_DoesNotTouchVersionKey(t *testing.T) {
 	svc, mr := newTestService(t)
 	ctx := context.Background()
 
-	if err := svc.Subscribe(ctx, "user-1", strPtr("Ленина")); err != nil {
+	if err := svc.Subscribe(ctx, "user-1", new("Ленина")); err != nil {
 		t.Fatalf("Subscribe error: %v", err)
 	}
 	if _, err := svc.GetFilter(ctx, "user-1"); err != nil {
@@ -142,7 +138,7 @@ func TestGetSubscribed_HappyPath(t *testing.T) {
 	if err := svc.Subscribe(ctx, "user-1", nil); err != nil {
 		t.Fatalf("Subscribe(nil) error: %v", err)
 	}
-	if err := svc.Subscribe(ctx, "user-2", strPtr("Ленина")); err != nil {
+	if err := svc.Subscribe(ctx, "user-2", new("Ленина")); err != nil {
 		t.Fatalf("Subscribe(street) error: %v", err)
 	}
 
@@ -168,7 +164,7 @@ func TestGetSubscribed_SkipsMalformed(t *testing.T) {
 	if err := svc.Subscribe(ctx, "good-1", nil); err != nil {
 		t.Fatalf("Subscribe error: %v", err)
 	}
-	if err := svc.Subscribe(ctx, "good-2", strPtr("Мира")); err != nil {
+	if err := svc.Subscribe(ctx, "good-2", new("Мира")); err != nil {
 		t.Fatalf("Subscribe error: %v", err)
 	}
 	mr.HSet(testPrefix+":filters", "bad-1", "not-json")

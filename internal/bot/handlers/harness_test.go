@@ -29,7 +29,10 @@ import (
 	"go.uber.org/zap"
 )
 
-const testToken = "123456:abcdefghijklmnopqrstuvwxyzABCDEFGHI"
+const (
+	testToken   = "123456:abcdefghijklmnopqrstuvwxyzABCDEFGHI"
+	waitTimeout = 10 * time.Second
+)
 
 // apiCall is a Bot API request captured by the fake Telegram server.
 type apiCall struct {
@@ -250,16 +253,16 @@ func (env *testEnv) send(t *testing.T, update telego.Update) {
 	env.updates <- update
 }
 
-func waitFor(t *testing.T, timeout time.Duration, cond func() bool) {
+func waitFor(t *testing.T, cond func() bool) {
 	t.Helper()
-	deadline := time.Now().Add(timeout)
+	deadline := time.Now().Add(waitTimeout)
 	for time.Now().Before(deadline) {
 		if cond() {
 			return
 		}
 		time.Sleep(10 * time.Millisecond)
 	}
-	t.Fatal("condition not met within", timeout)
+	t.Fatal("condition not met within", waitTimeout)
 }
 
 func settle(t *testing.T) {

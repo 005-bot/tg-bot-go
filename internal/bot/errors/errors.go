@@ -4,8 +4,6 @@
 // error-handler parity).
 package boterr
 
-import "fmt"
-
 // UserInputError marks errors caused by invalid user input. The middleware
 // replies with "⚠️ Ошибка ввода: {message}".
 type UserInputError struct {
@@ -28,11 +26,6 @@ func (e UserInputError) Unwrap() error {
 // NewUserInputError wraps err as a UserInputError.
 func NewUserInputError(err error) error {
 	return UserInputError{err: err}
-}
-
-// NewUserInputErrorf builds a UserInputError from a format string.
-func NewUserInputErrorf(format string, args ...any) error {
-	return UserInputError{err: fmt.Errorf(format, args...)}
 }
 
 // APIError marks temporary service or API failures. The middleware replies

@@ -40,5 +40,8 @@ func (h *Handler) handleStop(ctx *th.Context, update telego.Update) error {
 	if err := h.storage.Unsubscribe(ctx, userID); err != nil {
 		return fmt.Errorf("unsubscribe user %s: %w", userID, err)
 	}
-	return h.reply.Send(ctx, msg.Chat.ID, "🔕 Вы *отписались* от уведомлений об отключениях")
+	if err := h.reply.Send(ctx, msg.Chat.ID, "🔕 Вы *отписались* от уведомлений об отключениях"); err != nil {
+		return fmt.Errorf("send stop confirmation: %w", err)
+	}
+	return nil
 }

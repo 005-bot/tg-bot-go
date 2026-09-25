@@ -101,3 +101,26 @@
 - Truncation budget: max = 4096 - runeCount(suffix) - 1 (ellipsis) - 2 (newlines), clamped at 0; rune-slicing never splits Cyrillic/emoji; golden test asserts total 4096 runes + valid UTF-8
 - golangci-lint with GOWORK=off cannot resolve workspace-only deps (address-parser-go absent from tg-bot-go go.mod); per-package workspace-mode runs are the workaround
 - zsh treats bare '===' as command-path expansion; quote it or avoid as echo separator in shell commands
+
+## Development Notes (Wave 5)
+- telego v1.11.2 has no Bot.ParseUpdate; webhook update decoding is plain json.Unmarshal (internal json pkg is a drop-in encoding/json fork)
+- telegohandler routes (Handle/Use) must be registered before BotHandler.Start; concurrent registration+start is a data race caught by -race
+- fx stop hooks run in reverse option-list order for independent modules: to close Redis after ingestion, wire ingestion.Module() after redisfx.Module()
+- Long-lived telego polling ctx must derive from pipeline-owned context, not the fx OnStart ctx (canceled after start completes)
+- telegohandler StopWithContext blocks until in-flight handlers finish; a blocking-handler test can pin router-drain-before-DeleteWebhook ordering without a seam
+- urfave/cli v3 root Command.Run invokes HandleExitCoder on error (prints + os.Exit); set ExitErrHandler on the root command to test error dispatch without process exit
+- telego.WithAPIServer(server.URL) supports httptest Bot API testing; request path {apiURL}/bot{token}/{method}; API errors surface as *telegoapi.Error
+- go-core-fx/config auto-loads .env from CWD with env vars overriding it; CLI manual verification must set TELEGRAM__TOKEN explicitly to avoid the real token
+- This machine has no direct egress to api.telegram.org (dial timeout); dummy-token 401 verification impossible locally - use httptest/fakes
+- Webhook endpoint auth: optional TELEGRAM__WEBHOOK_SECRET gates X-Telegram-Bot-Api-Secret-Token (crypto/subtle); empty = Python parity (accept any)
+- fasthttp calls with custom Dial are bounded by ctx deadline via DoDeadline (~3s dial timeout to dead IPs) - synchronous startup API calls cannot hang fx start
+- golangci-lint v2.13.1 flags wave-1..4 code (exhaustruct on telego KeyboardButton/fx.Hook, shadows) that older local versions did not - pre-existing findings, not regressions
+
+## Development Notes (TASK-017 telegofx)
+- telego UpdatesViaWebhook closes its update channel on ctx cancellation while its decode handler may be blocked sending; any blocked-send-vs-close is a -race failure/panic, so cancel the caller ctx only after its decode consumer exits (background-derived ctx owned by the pump)
+- telegofx repo .golangci.yml excludes 'exhaustruct' for _test.go but enables 'exhaustruct_v5' (name mismatch) - test struct literals are still checked and must list all fields
+- A failed RunWebhook/Run must not own close(b.updates): closing in the caller's defer double-closes when a second run fails fast; the sole sender pump should own the close
+- A literal 'fill the buffer then expect busy' webhook test is racy when an async pump drains the channel: prime until busy, then assert busy persists while the consumer is blocked
+- WithWebhookBuffer(0) must fall back to the default (128) or the non-blocking handler is dead-on-arrival on an unbuffered channel
+- fx-provided *telegofx.WebhookHandler is nil in ModePolling; consumers must nil-check or wire only in ModeWebhook (documented contract)
+- telegofx webhook contribution state: branch feature/webhook-mode (commits 9a9ab88 + e5bf61f), master clean at a64ca2d, NOT pushed, no tags; consumed via go.work (../go-core-fx/telegofx)

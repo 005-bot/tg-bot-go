@@ -60,16 +60,33 @@ func (h *Handler) handleCommand(ctx *th.Context, update telego.Update) error {
 
 	markup := &telego.ReplyKeyboardMarkup{
 		Keyboard: [][]telego.KeyboardButton{
-			{{Text: "Ничего", IconCustomEmojiID: "", Style: ""}},
+			{
+				{
+					Text:              "Ничего",
+					IconCustomEmojiID: "",
+					Style:             "",
+					RequestUsers:      nil,
+					RequestChat:       nil,
+					RequestManagedBot: nil,
+					RequestContact:    false,
+					RequestLocation:   false,
+					RequestPoll:       nil,
+					WebApp:            nil,
+				},
+			},
 		},
 		IsPersistent:          false,
 		ResizeKeyboard:        true,
 		OneTimeKeyboard:       true,
 		InputFieldPlaceholder: "",
 		Selective:             false,
+		ForceReply:            false,
 	}
 	h.logger.Info("user started feedback", zap.Int64("user_id", msg.From.ID))
-	return h.reply.SendWithKeyboard(ctx, msg.Chat.ID, "Что бы Вы хотели нам сказать?", markup)
+	if err := h.reply.SendWithKeyboard(ctx, msg.Chat.ID, "Что бы Вы хотели нам сказать?", markup); err != nil {
+		return fmt.Errorf("send feedback prompt: %w", err)
+	}
+	return nil
 }
 
 // handleCancel clears the FSM state without forwarding anything.
@@ -83,10 +100,13 @@ func (h *Handler) handleCancel(ctx *th.Context, update telego.Update) error {
 		return fmt.Errorf("clear fsm state: %w", err)
 	}
 	h.logger.Info("user canceled feedback", zap.Int64("user_id", msg.From.ID))
-	return h.reply.SendWithKeyboard(ctx, msg.Chat.ID, "Отзыв не отправлен", &telego.ReplyKeyboardRemove{
+	if err := h.reply.SendWithKeyboard(ctx, msg.Chat.ID, "Отзыв не отправлен", &telego.ReplyKeyboardRemove{
 		RemoveKeyboard: true,
 		Selective:      false,
-	})
+	}); err != nil {
+		return fmt.Errorf("send feedback cancellation: %w", err)
+	}
+	return nil
 }
 
 // handleValue forwards the message to the admin chat and closes the
@@ -105,8 +125,11 @@ func (h *Handler) handleValue(ctx *th.Context, update telego.Update) error {
 		return fmt.Errorf("clear fsm state: %w", err)
 	}
 	h.logger.Info("user sent feedback", zap.Int64("user_id", msg.From.ID))
-	return h.reply.SendWithKeyboard(ctx, msg.Chat.ID, "Спасибо за отзыв!", &telego.ReplyKeyboardRemove{
+	if err := h.reply.SendWithKeyboard(ctx, msg.Chat.ID, "Спасибо за отзыв!", &telego.ReplyKeyboardRemove{
 		RemoveKeyboard: true,
 		Selective:      false,
-	})
+	}); err != nil {
+		return fmt.Errorf("send feedback confirmation: %w", err)
+	}
+	return nil
 }

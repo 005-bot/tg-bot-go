@@ -2,6 +2,7 @@ package server
 
 import (
 	"github.com/005-bot/tg-bot-go/internal/server/docs"
+	"github.com/005-bot/tg-bot-go/internal/server/webhook"
 	"github.com/go-core-fx/fiberfx"
 	"github.com/go-core-fx/fiberfx/handler"
 	"github.com/go-core-fx/fiberfx/health"
@@ -29,6 +30,7 @@ func Module() fx.Option {
 		fx.Provide(
 			health.NewHandler,
 			openapi.NewHandler,
+			webhook.NewHandler,
 			fx.Private,
 		),
 

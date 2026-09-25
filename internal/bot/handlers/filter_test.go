@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"testing"
-	"time"
 
 	"github.com/005-bot/tg-bot-go/internal/fsm"
 	"github.com/mymmrac/telego"
@@ -31,7 +30,7 @@ func TestFilterPromptWithoutCurrentValue(t *testing.T) {
 	env := newTestEnv(t, 0)
 	env.send(t, updateWithText(111, 111, "vasya", "Вася", "/filter"))
 
-	waitFor(t, 3*time.Second, func() bool { return len(env.fake.calls("sendMessage")) == 1 })
+	waitFor(t, func() bool { return len(env.fake.calls("sendMessage")) == 1 })
 
 	user := decodeSend(t, env.fake.calls("sendMessage")[0])
 	wantChatID(t, user.ChatID, 111)
@@ -58,7 +57,7 @@ func TestFilterPromptWithCurrentValue(t *testing.T) {
 	}
 
 	env.send(t, updateWithText(222, 222, "petr", "Петя", "/filter"))
-	waitFor(t, 3*time.Second, func() bool { return len(env.fake.calls("sendMessage")) == 1 })
+	waitFor(t, func() bool { return len(env.fake.calls("sendMessage")) == 1 })
 
 	want := filterPromptBase + "\n\n*Текущее значение:* улица Ленина"
 	user := decodeSend(t, env.fake.calls("sendMessage")[0])
@@ -81,7 +80,7 @@ func TestFilterCancelWithStreet(t *testing.T) {
 	}
 
 	env.send(t, updateWithText(333, 333, "", "Петя", "Отмена"))
-	waitFor(t, 3*time.Second, func() bool { return len(env.fake.calls("sendMessage")) == 1 })
+	waitFor(t, func() bool { return len(env.fake.calls("sendMessage")) == 1 })
 
 	user := decodeSend(t, env.fake.calls("sendMessage")[0])
 	wantChatID(t, user.ChatID, 333)
@@ -110,7 +109,7 @@ func TestFilterCancelWithoutStreet(t *testing.T) {
 	}
 
 	env.send(t, updateWithText(444, 444, "", "Петя", "Отмена"))
-	waitFor(t, 3*time.Second, func() bool { return len(env.fake.calls("sendMessage")) == 1 })
+	waitFor(t, func() bool { return len(env.fake.calls("sendMessage")) == 1 })
 
 	user := decodeSend(t, env.fake.calls("sendMessage")[0])
 	wantChatID(t, user.ChatID, 444)
@@ -128,12 +127,12 @@ func TestFilterValueSubscribesOriginalName(t *testing.T) {
 	env := newTestEnv(t, 0)
 	ctx := context.Background()
 	env.send(t, updateWithText(555, 555, "", "Петя", "/filter"))
-	waitFor(t, 3*time.Second, func() bool { return len(env.fake.calls("sendMessage")) == 1 })
+	waitFor(t, func() bool { return len(env.fake.calls("sendMessage")) == 1 })
 
 	// "Ленина" fuzzy-matches at exactly 0.85 (boundary): subscribes with the
 	// ORIGINAL database name, not the typed text.
 	env.send(t, updateWithText(555, 555, "", "Петя", "Ленина"))
-	waitFor(t, 3*time.Second, func() bool { return len(env.fake.calls("sendMessage")) == 2 })
+	waitFor(t, func() bool { return len(env.fake.calls("sendMessage")) == 2 })
 
 	match, err := env.parser.Normalize(ctx, "Ленина")
 	if err != nil {
@@ -165,10 +164,10 @@ func TestFilterValueExactMatch(t *testing.T) {
 	env := newTestEnv(t, 0)
 	ctx := context.Background()
 	env.send(t, updateWithText(666, 666, "", "Петя", "/filter"))
-	waitFor(t, 3*time.Second, func() bool { return len(env.fake.calls("sendMessage")) == 1 })
+	waitFor(t, func() bool { return len(env.fake.calls("sendMessage")) == 1 })
 
 	env.send(t, updateWithText(666, 666, "", "Петя", "улица Ленина"))
-	waitFor(t, 3*time.Second, func() bool { return len(env.fake.calls("sendMessage")) == 2 })
+	waitFor(t, func() bool { return len(env.fake.calls("sendMessage")) == 2 })
 
 	filter, err := env.storage.GetFilter(ctx, "666")
 	if err != nil {
@@ -183,10 +182,10 @@ func TestFilterValueLowConfidence(t *testing.T) {
 	env := newTestEnv(t, 0)
 	ctx := context.Background()
 	env.send(t, updateWithText(777, 777, "", "Петя", "/filter"))
-	waitFor(t, 3*time.Second, func() bool { return len(env.fake.calls("sendMessage")) == 1 })
+	waitFor(t, func() bool { return len(env.fake.calls("sendMessage")) == 1 })
 
 	env.send(t, updateWithText(777, 777, "", "Петя", "Мира"))
-	waitFor(t, 3*time.Second, func() bool { return len(env.fake.calls("sendMessage")) == 2 })
+	waitFor(t, func() bool { return len(env.fake.calls("sendMessage")) == 2 })
 
 	match, err := env.parser.Normalize(ctx, "Мира")
 	if err != nil {
@@ -219,12 +218,12 @@ func TestFilterValueNoMatch(t *testing.T) {
 	env := newTestEnv(t, 0)
 	ctx := context.Background()
 	env.send(t, updateWithText(888, 888, "", "Петя", "/filter"))
-	waitFor(t, 3*time.Second, func() bool { return len(env.fake.calls("sendMessage")) == 1 })
+	waitFor(t, func() bool { return len(env.fake.calls("sendMessage")) == 1 })
 
 	// '!!!' and whitespace-only input both surface as ErrNoMatch.
 	for _, input := range []string{"!!!", " "} {
 		env.send(t, updateWithText(888, 888, "", "Петя", input))
-		waitFor(t, 3*time.Second, func() bool {
+		waitFor(t, func() bool {
 			return len(env.fake.calls("sendMessage")) == 2
 		})
 		if state, stateErr := env.fsm.GetState(ctx, 888, 888); stateErr != nil || state != fsm.FilterState {
@@ -249,10 +248,10 @@ func TestFilterConfirmationTap(t *testing.T) {
 	env := newTestEnv(t, 0)
 	ctx := context.Background()
 	env.send(t, updateWithText(999, 999, "", "Петя", "/filter"))
-	waitFor(t, 3*time.Second, func() bool { return len(env.fake.calls("sendMessage")) == 1 })
+	waitFor(t, func() bool { return len(env.fake.calls("sendMessage")) == 1 })
 
 	env.send(t, updateWithText(999, 999, "", "Петя", "Мира"))
-	waitFor(t, 3*time.Second, func() bool { return len(env.fake.calls("sendMessage")) == 2 })
+	waitFor(t, func() bool { return len(env.fake.calls("sendMessage")) == 2 })
 
 	match, err := env.parser.Normalize(ctx, "Мира")
 	if err != nil {
@@ -275,7 +274,7 @@ func TestFilterConfirmationTap(t *testing.T) {
 	}
 
 	env.send(t, updateWithText(999, 999, "", "Петя", buttonName))
-	waitFor(t, 3*time.Second, func() bool { return len(env.fake.calls("sendMessage")) == 3 })
+	waitFor(t, func() bool { return len(env.fake.calls("sendMessage")) == 3 })
 
 	sends := env.fake.calls("sendMessage")
 	user := decodeSend(t, sends[2])
@@ -306,7 +305,7 @@ func TestFilterCommandDuringFeedbackState(t *testing.T) {
 	}
 
 	env.send(t, updateWithText(1010, 1010, "", "Петя", "/filter"))
-	waitFor(t, 3*time.Second, func() bool { return len(env.fake.calls("sendMessage")) == 1 })
+	waitFor(t, func() bool { return len(env.fake.calls("sendMessage")) == 1 })
 
 	user := decodeSend(t, env.fake.calls("sendMessage")[0])
 	if user.Text != filterPromptBase {
@@ -325,7 +324,7 @@ func TestStopDuringFilterState(t *testing.T) {
 	}
 
 	env.send(t, updateWithText(1919, 1919, "", "Петя", "/stop"))
-	waitFor(t, 3*time.Second, func() bool { return len(env.fake.calls("sendMessage")) == 1 })
+	waitFor(t, func() bool { return len(env.fake.calls("sendMessage")) == 1 })
 
 	user := decodeSend(t, env.fake.calls("sendMessage")[0])
 	wantChatID(t, user.ChatID, 1919)

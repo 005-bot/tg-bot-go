@@ -96,15 +96,32 @@ func (h *Handler) handleCommand(ctx *th.Context, update telego.Update) error {
 
 	markup := &telego.ReplyKeyboardMarkup{
 		Keyboard: [][]telego.KeyboardButton{
-			{{Text: "Отмена", IconCustomEmojiID: "", Style: ""}},
+			{
+				{
+					Text:              "Отмена",
+					IconCustomEmojiID: "",
+					Style:             "",
+					RequestUsers:      nil,
+					RequestChat:       nil,
+					RequestManagedBot: nil,
+					RequestContact:    false,
+					RequestLocation:   false,
+					RequestPoll:       nil,
+					WebApp:            nil,
+				},
+			},
 		},
 		IsPersistent:          false,
 		ResizeKeyboard:        true,
 		OneTimeKeyboard:       true,
 		InputFieldPlaceholder: "",
 		Selective:             false,
+		ForceReply:            false,
 	}
-	return h.reply.SendWithKeyboard(ctx, msg.Chat.ID, promptBase+filterText, markup)
+	if sendErr := h.reply.SendWithKeyboard(ctx, msg.Chat.ID, promptBase+filterText, markup); sendErr != nil {
+		return fmt.Errorf("send filter prompt: %w", sendErr)
+	}
+	return nil
 }
 
 // handleCancel clears the FSM state and reports the current subscription.
@@ -127,26 +144,29 @@ func (h *Handler) handleCancel(ctx *th.Context, update telego.Update) error {
 	if f.Street != nil {
 		text = fmt.Sprintf("Вы подписаны на уведомления для %s", *f.Street)
 	}
-	return h.reply.SendWithKeyboard(ctx, msg.Chat.ID, text, &telego.ReplyKeyboardRemove{
+	if sendErr := h.reply.SendWithKeyboard(ctx, msg.Chat.ID, text, &telego.ReplyKeyboardRemove{
 		RemoveKeyboard: true,
 		Selective:      false,
-	})
+	}); sendErr != nil {
+		return fmt.Errorf("send filter cancellation: %w", sendErr)
+	}
+	return nil
 }
 
 // handleValue normalizes the street input and either subscribes, asks for
-// confirmation, or reports a no-match. A nil match without error means the
-// handler already replied and the flow must stop (Python parity).
+// confirmation, or reports a no-match. A handled result means the handler
+// already replied and the flow must stop (Python parity).
 func (h *Handler) handleValue(ctx *th.Context, update telego.Update) error {
 	msg := update.Message
 	if msg == nil || msg.From == nil {
 		return nil
 	}
 
-	parsed, err := h.parseAndSubscribe(ctx, msg, msg.Text)
+	parsed, handled, err := h.parseAndSubscribe(ctx, msg, msg.Text)
 	if err != nil {
 		return err
 	}
-	if parsed == nil {
+	if handled {
 		return nil
 	}
 
@@ -154,45 +174,84 @@ func (h *Handler) handleValue(ctx *th.Context, update telego.Update) error {
 		return fmt.Errorf("clear fsm state: %w", clearErr)
 	}
 	h.logger.Info("user subscribed via filter", zap.Int64("user_id", msg.From.ID), zap.String("street", parsed.Name))
-	return h.reply.SendWithKeyboard(ctx, msg.Chat.ID, "Создана подписка: "+parsed.Name, &telego.ReplyKeyboardRemove{
-		RemoveKeyboard: true,
-		Selective:      false,
-	})
+	if sendErr := h.reply.SendWithKeyboard(
+		ctx,
+		msg.Chat.ID,
+		"Создана подписка: "+parsed.Name,
+		&telego.ReplyKeyboardRemove{
+			RemoveKeyboard: true,
+			Selective:      false,
+		},
+	); sendErr != nil {
+		return fmt.Errorf("send filter subscription: %w", sendErr)
+	}
+	return nil
 }
 
 // parseAndSubscribe normalizes value and subscribes the user with the
 // ORIGINAL database street name when confidence is at least 0.85. Lower
 // confidence offers a confirmation keyboard; no match re-asks with the
 // state retained (aiogram parse_and_subscribe parity).
-func (h *Handler) parseAndSubscribe(ctx context.Context, msg *telego.Message, value string) (*address.Match, error) {
+func (h *Handler) parseAndSubscribe(
+	ctx context.Context,
+	msg *telego.Message,
+	value string,
+) (*address.Match, bool, error) {
 	parsed, err := h.parser.Normalize(ctx, strings.TrimSpace(value))
 	if errors.Is(err, address.ErrNoMatch) {
 		if stateErr := h.fsm.SetState(ctx, msg.Chat.ID, msg.From.ID, fsm.FilterState); stateErr != nil {
-			return nil, fmt.Errorf("set fsm state: %w", stateErr)
+			return nil, false, fmt.Errorf("set fsm state: %w", stateErr)
 		}
 		if sendErr := h.reply.Send(ctx, msg.Chat.ID, noMatchPrompt); sendErr != nil {
-			return nil, sendErr
+			return nil, false, fmt.Errorf("send no-match prompt: %w", sendErr)
 		}
-		return nil, nil
+		return nil, true, nil
 	}
 	if err != nil {
-		return nil, fmt.Errorf("normalize street %q: %w", value, err)
+		return nil, false, fmt.Errorf("normalize street %q: %w", value, err)
 	}
 
 	if parsed.Confidence < minSubscribeConfidence {
 		if stateErr := h.fsm.SetState(ctx, msg.Chat.ID, msg.From.ID, fsm.FilterState); stateErr != nil {
-			return nil, fmt.Errorf("set fsm state: %w", stateErr)
+			return nil, false, fmt.Errorf("set fsm state: %w", stateErr)
 		}
 		markup := &telego.ReplyKeyboardMarkup{
 			Keyboard: [][]telego.KeyboardButton{
-				{{Text: parsed.Name, IconCustomEmojiID: "", Style: ""}},
-				{{Text: "Отмена", IconCustomEmojiID: "", Style: ""}},
+				{
+					{
+						Text:              parsed.Name,
+						IconCustomEmojiID: "",
+						Style:             "",
+						RequestUsers:      nil,
+						RequestChat:       nil,
+						RequestManagedBot: nil,
+						RequestContact:    false,
+						RequestLocation:   false,
+						RequestPoll:       nil,
+						WebApp:            nil,
+					},
+				},
+				{
+					{
+						Text:              "Отмена",
+						IconCustomEmojiID: "",
+						Style:             "",
+						RequestUsers:      nil,
+						RequestChat:       nil,
+						RequestManagedBot: nil,
+						RequestContact:    false,
+						RequestLocation:   false,
+						RequestPoll:       nil,
+						WebApp:            nil,
+					},
+				},
 			},
 			IsPersistent:          false,
 			ResizeKeyboard:        true,
 			OneTimeKeyboard:       true,
 			InputFieldPlaceholder: "",
 			Selective:             false,
+			ForceReply:            false,
 		}
 		if sendErr := h.reply.SendWithKeyboard(
 			ctx,
@@ -200,14 +259,14 @@ func (h *Handler) parseAndSubscribe(ctx context.Context, msg *telego.Message, va
 			fmt.Sprintf(confirmFormat, parsed.Name),
 			markup,
 		); sendErr != nil {
-			return nil, sendErr
+			return nil, false, fmt.Errorf("send confirmation prompt: %w", sendErr)
 		}
-		return nil, nil
+		return nil, true, nil
 	}
 
 	userID := strconv.FormatInt(msg.From.ID, 10)
-	if subErr := h.storage.Subscribe(ctx, userID, &parsed.Name); subErr != nil {
-		return nil, fmt.Errorf("subscribe street for user %s: %w", userID, subErr)
+	if err = h.storage.Subscribe(ctx, userID, &parsed.Name); err != nil {
+		return nil, false, fmt.Errorf("subscribe street for user %s: %w", userID, err)
 	}
-	return parsed, nil
+	return parsed, false, nil
 }

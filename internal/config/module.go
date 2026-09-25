@@ -35,6 +35,7 @@ func Module() fx.Option {
 				return telegofx.Config{
 					Token:    cfg.Telegram.Token,
 					ProxyURL: cfg.Telegram.ProxyURL,
+					Mode:     cfg.Telegram.Mode,
 				}
 			},
 			func(cfg Config) bot.Config {

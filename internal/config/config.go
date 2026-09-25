@@ -13,6 +13,7 @@ import (
 	"os"
 
 	"github.com/go-core-fx/config"
+	"github.com/go-core-fx/telegofx"
 )
 
 type http struct {
@@ -35,9 +36,9 @@ type redisConfig struct {
 }
 
 type telegramConfig struct {
-	Token      string `koanf:"token"`
-	ProxyURL   string `koanf:"proxy_url"`
-	WebhookURL string `koanf:"webhook_url"`
+	Token    string        `koanf:"token"`
+	ProxyURL string        `koanf:"proxy_url"`
+	Mode     telegofx.Mode `koanf:"mode"`
 }
 
 type adminConfig struct {
@@ -57,14 +58,20 @@ func Default() Config {
 			Address:     "127.0.0.1:3000",
 			ProxyHeader: "X-Forwarded-For",
 			Proxies:     []string{},
+			OpenAPI: openAPIConfig{
+				Enabled:    false,
+				PublicHost: "",
+				PublicPath: "",
+			},
 		},
 		Redis: redisConfig{
 			URL:    "redis://localhost:6379",
 			Prefix: "bot-005",
 		},
 		Telegram: telegramConfig{
-			Token:      "",
-			WebhookURL: "",
+			Token:    "",
+			ProxyURL: "",
+			Mode:     telegofx.ModePolling,
 		},
 		Admin: adminConfig{
 			TelegramID: 0,

@@ -3,7 +3,6 @@ package handlers_test
 import (
 	"context"
 	"testing"
-	"time"
 
 	"github.com/005-bot/tg-bot-go/internal/fsm"
 )
@@ -12,7 +11,7 @@ func TestFeedbackCommand(t *testing.T) {
 	env := newTestEnv(t, 0)
 	env.send(t, updateWithText(1212, 1212, "vasya", "Вася", "/feedback"))
 
-	waitFor(t, 3*time.Second, func() bool { return len(env.fake.calls("sendMessage")) == 1 })
+	waitFor(t, func() bool { return len(env.fake.calls("sendMessage")) == 1 })
 
 	user := decodeSend(t, env.fake.calls("sendMessage")[0])
 	wantChatID(t, user.ChatID, 1212)
@@ -35,7 +34,7 @@ func TestFeedbackCancel(t *testing.T) {
 	}
 
 	env.send(t, updateWithText(1313, 1313, "", "Петя", "Ничего"))
-	waitFor(t, 3*time.Second, func() bool { return len(env.fake.calls("sendMessage")) == 1 })
+	waitFor(t, func() bool { return len(env.fake.calls("sendMessage")) == 1 })
 
 	user := decodeSend(t, env.fake.calls("sendMessage")[0])
 	wantChatID(t, user.ChatID, 1313)
@@ -72,8 +71,8 @@ func TestFeedbackValueForwardsToAdmin(t *testing.T) {
 	}
 
 	env.send(t, updateWithText(1515, 1515, "", "Петя", "Бот сломался"))
-	waitFor(t, 3*time.Second, func() bool { return len(env.fake.calls("forwardMessage")) == 1 })
-	waitFor(t, 3*time.Second, func() bool { return len(env.fake.calls("sendMessage")) == 1 })
+	waitFor(t, func() bool { return len(env.fake.calls("forwardMessage")) == 1 })
+	waitFor(t, func() bool { return len(env.fake.calls("sendMessage")) == 1 })
 
 	forward := decodeForward(t, env.fake.calls("forwardMessage")[0])
 	wantChatID(t, forward.ChatID, 4242)
@@ -102,7 +101,7 @@ func TestFeedbackValueWithoutAdminDoesNotForward(t *testing.T) {
 	}
 
 	env.send(t, updateWithText(1616, 1616, "", "Петя", "Спасибо, всё работает"))
-	waitFor(t, 3*time.Second, func() bool { return len(env.fake.calls("sendMessage")) == 1 })
+	waitFor(t, func() bool { return len(env.fake.calls("sendMessage")) == 1 })
 
 	user := decodeSend(t, env.fake.calls("sendMessage")[0])
 	if user.Text != "Спасибо за отзыв!" {
@@ -128,7 +127,7 @@ func TestFeedbackCancelTextIsValueInFilterState(t *testing.T) {
 	}
 
 	env.send(t, updateWithText(1717, 1717, "", "Петя", "Ничего"))
-	waitFor(t, 3*time.Second, func() bool { return len(env.fake.calls("sendMessage")) == 1 })
+	waitFor(t, func() bool { return len(env.fake.calls("sendMessage")) == 1 })
 
 	match, err := env.parser.Normalize(ctx, "Ничего")
 	if err != nil {
@@ -152,8 +151,8 @@ func TestFeedbackValueForwardsCancelText(t *testing.T) {
 	}
 
 	env.send(t, updateWithText(1818, 1818, "", "Петя", "Отмена"))
-	waitFor(t, 3*time.Second, func() bool { return len(env.fake.calls("forwardMessage")) == 1 })
-	waitFor(t, 3*time.Second, func() bool { return len(env.fake.calls("sendMessage")) == 1 })
+	waitFor(t, func() bool { return len(env.fake.calls("forwardMessage")) == 1 })
+	waitFor(t, func() bool { return len(env.fake.calls("sendMessage")) == 1 })
 
 	forward := decodeForward(t, env.fake.calls("forwardMessage")[0])
 	wantChatID(t, forward.ChatID, 4242)

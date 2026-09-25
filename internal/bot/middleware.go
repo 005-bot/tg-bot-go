@@ -32,12 +32,10 @@ func ErrorMiddleware(reply *Reply, logger *zap.Logger) th.Handler {
 //   - APIError: "🔧 Временная проблема с сервисом, пожалуйста, попробуйте позже"
 //   - any other error: "🚨 Системная ошибка - наша команда уведомлена"
 func MapError(err error) string {
-	var userInput boterr.UserInputError
-	if errors.As(err, &userInput) {
+	if _, ok := errors.AsType[boterr.UserInputError](err); ok {
 		return "⚠️ Ошибка ввода: " + err.Error()
 	}
-	var api boterr.APIError
-	if errors.As(err, &api) {
+	if _, ok := errors.AsType[boterr.APIError](err); ok {
 		return "🔧 Временная проблема с сервисом, пожалуйста, попробуйте позже"
 	}
 	return "🚨 Системная ошибка - наша команда уведомлена"

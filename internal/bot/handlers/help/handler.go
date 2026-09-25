@@ -3,6 +3,8 @@
 package help
 
 import (
+	"fmt"
+
 	"github.com/005-bot/tg-bot-go/internal/bot/handler"
 	"github.com/go-core-fx/telegofx"
 	"github.com/mymmrac/telego"
@@ -44,5 +46,8 @@ func (h *Handler) handleHelp(ctx *th.Context, update telego.Update) error {
 	if msg == nil || msg.From == nil {
 		return nil
 	}
-	return h.reply.Send(ctx, msg.Chat.ID, helpText)
+	if err := h.reply.Send(ctx, msg.Chat.ID, helpText); err != nil {
+		return fmt.Errorf("send help: %w", err)
+	}
+	return nil
 }

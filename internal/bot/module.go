@@ -22,6 +22,8 @@ import (
 	"go.uber.org/zap"
 )
 
+const setCommandsTimeout = 10 * time.Second
+
 // Module wires the bot: proxy client option, address parser, reply helper,
 // admin notificator, error middleware, and the command handlers. The error
 // middleware is registered before the handlers so it wraps every route.
@@ -72,16 +74,14 @@ func registerHandlers(handlers []handler.Handler, router *telegofx.Router, middl
 // newAddressParser creates the street parser backed by the embedded streets
 // database and releases its temporary files on shutdown.
 func newAddressParser(lc fx.Lifecycle) (*address.Parser, error) {
-	parser, err := address.NewParser(address.Config{})
+	parser, err := address.NewParser(address.Config{DBPath: ""})
 	if err != nil {
 		return nil, fmt.Errorf("create address parser: %w", err)
 	}
-	lc.Append(fx.Hook{
-		OnStop: func(context.Context) error {
-			parser.Stop()
-			return nil
-		},
-	})
+	lc.Append(fx.StopHook(func(context.Context) error {
+		parser.Stop()
+		return nil
+	}))
 	return parser, nil
 }
 
@@ -91,7 +91,7 @@ func newAddressParser(lc fx.Lifecycle) (*address.Parser, error) {
 // never block application startup. Failures are logged, not fatal.
 func setCommands(bot *telegofx.Bot, logger *zap.Logger) {
 	go func() {
-		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), setCommandsTimeout)
 		defer cancel()
 
 		commands := []telego.BotCommand{
