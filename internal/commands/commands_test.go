@@ -15,6 +15,7 @@ import (
 const (
 	testCommandWebhook = "set-webhook"
 	testWebhookURL     = "https://example.com/hook"
+	testTelegramToken  = "123456:abcdefghijklmnopqrstuvwxyzABCDEFGHI"
 )
 
 func testVersion() healthfx.Version {
@@ -110,6 +111,24 @@ func TestRootSetWebhookInvalidToken(t *testing.T) {
 	}
 	if !strings.Contains(exitErr.Error(), "token") {
 		t.Fatalf("error = %q, want token context", exitErr.Error())
+	}
+}
+
+func TestRootSetWebhookInvalidProxy(t *testing.T) {
+	t.Setenv("TELEGRAM__TOKEN", testTelegramToken)
+	t.Setenv("TELEGRAM__PROXY_URL", "http://127.0.0.1:8080")
+
+	err := runRoot(t, "tg-bot-go", testCommandWebhook, testWebhookURL)
+
+	var exitErr cli.ExitCoder
+	if !errors.As(err, &exitErr) {
+		t.Fatalf("want cli.ExitCoder, got %T: %v", err, err)
+	}
+	if exitErr.ExitCode() != 1 {
+		t.Fatalf("exit code = %d, want 1", exitErr.ExitCode())
+	}
+	if !strings.Contains(exitErr.Error(), "proxy") {
+		t.Fatalf("error = %q, want proxy context", exitErr.Error())
 	}
 }
 

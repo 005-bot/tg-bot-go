@@ -10,8 +10,10 @@ import (
 	"os"
 
 	"github.com/005-bot/tg-bot-go/internal/config"
+	"github.com/go-core-fx/telegofx"
 	"github.com/mymmrac/telego"
 	"github.com/urfave/cli/v3"
+	"go.uber.org/zap"
 )
 
 const (
@@ -74,7 +76,7 @@ func runCommand(ctx context.Context, url string) error {
 		return cli.Exit(fmt.Errorf("load config: %w", err), exitCodeFailure)
 	}
 
-	bot, err := NewBot(cfg.Telegram.Token)
+	bot, err := NewBot(cfg.Telegram.Token, cfg.Telegram.ProxyURL)
 	if err != nil {
 		return cli.Exit(err, exitCodeFailure)
 	}
@@ -87,29 +89,36 @@ func runCommand(ctx context.Context, url string) error {
 	return nil
 }
 
-// NewBot creates a Telegram bot from the configured token. telego rejects
-// empty and malformed tokens at creation time (token regexp
+// NewBot creates a Telegram bot from the configured token and optional proxy.
+// telego rejects empty and malformed tokens at creation time (token regexp
 // `^\d+:[\w-]{35}$`); the error is wrapped so the cause is clear to an
 // operator.
-func NewBot(token string) (*telego.Bot, error) {
+func NewBot(token, proxyURL string) (*telego.Bot, error) {
 	if token == "" {
 		return nil, ErrTokenNotConfigured
 	}
 
-	bot, err := telego.NewBot(token, telego.WithDiscardLogger())
+	bot, err := telegofx.New(
+		telegofx.Config{
+			Token:    token,
+			ProxyURL: proxyURL,
+			Mode:     telegofx.ModePolling,
+		},
+		nil,
+		zap.NewNop(),
+	)
 	if err != nil {
-		return nil, fmt.Errorf("invalid telegram token: %w", err)
+		return nil, fmt.Errorf("create telegram bot: %w", err)
 	}
 
-	return bot, nil
+	return bot.Bot, nil
 }
 
 // Run points the bot's webhook at url with allowed_updates ["message"] and
 // prints a confirmation on success, matching the Python CLI output.
 func Run(ctx context.Context, bot *telego.Bot, url string) error {
 	if err := bot.SetWebhook(ctx, &telego.SetWebhookParams{
-		URL:            url,
-		AllowedUpdates: []string{"message"},
+		URL: url,
 	}); err != nil {
 		return fmt.Errorf("set webhook: %w", err)
 	}

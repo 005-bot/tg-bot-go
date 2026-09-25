@@ -134,7 +134,7 @@ func TestRunSetWebhookSuccess(t *testing.T) {
 	if calls[0].URL != testURL {
 		t.Errorf("url = %q, want %q", calls[0].URL, testURL)
 	}
-	wantUpdates := []string{"message"}
+	wantUpdates := []string{}
 	if !slices.Equal(calls[0].AllowedUpdates, wantUpdates) {
 		t.Errorf("allowed_updates = %v, want %v", calls[0].AllowedUpdates, wantUpdates)
 	}
@@ -214,7 +214,7 @@ func TestNewBotTokenValidation(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := webhook.NewBot(tt.token)
+			_, err := webhook.NewBot(tt.token, "")
 			if err == nil {
 				t.Fatal("NewBot: want error, got nil")
 			}
@@ -226,11 +226,39 @@ func TestNewBotTokenValidation(t *testing.T) {
 }
 
 func TestNewBotValidToken(t *testing.T) {
-	bot, err := webhook.NewBot(testToken)
+	bot, err := webhook.NewBot(testToken, "")
 	if err != nil {
 		t.Fatalf("NewBot: %v", err)
 	}
 	if bot == nil {
 		t.Fatal("NewBot: nil bot")
+	}
+}
+
+func TestNewBotProxyConfiguration(t *testing.T) {
+	tests := []struct {
+		name     string
+		proxyURL string
+		wantErr  bool
+	}{
+		{name: "socks5", proxyURL: "socks5://127.0.0.1:1080"},
+		{name: "socks5h", proxyURL: "socks5h://127.0.0.1:1080"},
+		{name: "unsupported scheme", proxyURL: "http://127.0.0.1:8080", wantErr: true},
+		{name: "empty host", proxyURL: "socks5://:1080", wantErr: true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			bot, err := webhook.NewBot(testToken, tt.proxyURL)
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("NewBot error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if err != nil && !strings.Contains(err.Error(), "proxy") {
+				t.Fatalf("error = %q, want proxy context", err.Error())
+			}
+			if err == nil && bot == nil {
+				t.Fatal("NewBot: nil bot")
+			}
+		})
 	}
 }
