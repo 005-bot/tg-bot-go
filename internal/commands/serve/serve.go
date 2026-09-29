@@ -4,17 +4,17 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/capcom6/go-project-template/internal/bot"
-	"github.com/capcom6/go-project-template/internal/config"
-	"github.com/capcom6/go-project-template/internal/db"
-	"github.com/capcom6/go-project-template/internal/example"
-	"github.com/capcom6/go-project-template/internal/server"
-	"github.com/go-core-fx/bunfx"
+	"github.com/005-bot/tg-bot-go/internal/bot"
+	"github.com/005-bot/tg-bot-go/internal/config"
+	"github.com/005-bot/tg-bot-go/internal/fsm"
+	"github.com/005-bot/tg-bot-go/internal/listener"
+	"github.com/005-bot/tg-bot-go/internal/notifier"
+	"github.com/005-bot/tg-bot-go/internal/server"
+	"github.com/005-bot/tg-bot-go/internal/storage"
 	"github.com/go-core-fx/fiberfx"
-	"github.com/go-core-fx/goosefx"
 	"github.com/go-core-fx/healthfx"
 	"github.com/go-core-fx/logger"
-	"github.com/go-core-fx/sqlfx"
+	"github.com/go-core-fx/redisfx"
 	"github.com/go-core-fx/telegofx"
 	"github.com/go-core-fx/validatorfx"
 	"github.com/urfave/cli/v3"
@@ -25,8 +25,9 @@ import (
 // Command returns the serve command that starts the full application.
 func Command(version healthfx.Version) *cli.Command {
 	return &cli.Command{
-		Name:  "serve",
-		Usage: "Start the HTTP server, Telegram bot, and all services",
+		Name:    "serve",
+		Aliases: []string{"run"},
+		Usage:   "Start the HTTP server, Telegram bot, and all services",
 		Action: func(ctx context.Context, _ *cli.Command) error {
 			return run(ctx, version)
 		},
@@ -39,33 +40,37 @@ func run(ctx context.Context, version healthfx.Version) error {
 		logger.Module(),
 		logger.WithFxDefaultLogger(),
 		// badgerfx.Module(),
-		bunfx.Module(),
+		// bunfx.Module(),
 		// cachefx.Module(),
 		fiberfx.Module(),
 		// gocqlfx.Module(),
 		// gocqlxfx.Module(),
-		goosefx.Module(),
+		// goosefx.Module(),
 		// gormfx.Module(),
 		healthfx.Module(),
 		// httpfx.Module(),
 		// openaifx.Module(),
 		// openrouterfx.Module(),
-		// redisfx.Module(),
-		sqlfx.Module(),
+		redisfx.Module(),
+		// sqlfx.Module(),
 		// sqlxfx.Module(),
-		telegofx.Module(true),
+		telegofx.Module(telegofx.WithRouter()),
 		validatorfx.Module(),
 		// watermillfx.Module(),
 		//
 		// APP MODULES
 		config.Module(),
-		db.Module(),
+		// db.Module(),
 		server.Module(),
 		bot.Module(),
+		storage.Module(),
+		fsm.Module(),
+		listener.Module(),
+		notifier.Module(),
 		//
 		// BUSINESS MODULES
 		fx.Supply(version),
-		example.Module(true),
+		// example.Module(true),
 
 		fx.Invoke(func(lc fx.Lifecycle, logger *zap.Logger) {
 			lc.Append(fx.Hook{
