@@ -16,7 +16,6 @@ import (
 
 	address "github.com/005-bot/address-parser-go"
 	"github.com/005-bot/tg-bot-go/internal/bot"
-	boterr "github.com/005-bot/tg-bot-go/internal/bot/errors"
 	"github.com/005-bot/tg-bot-go/internal/bot/handler"
 	"github.com/005-bot/tg-bot-go/internal/bot/handlers/help"
 	"github.com/005-bot/tg-bot-go/internal/bot/handlers/start"
@@ -229,10 +228,10 @@ func newTestEnv(t *testing.T, adminID int64) *testEnv {
 
 	// Error-middleware mapping probes.
 	router.Handle(func(*th.Context, telego.Update) error {
-		return boterr.NewUserInputError(errors.New("invalid street name"))
+		return bot.NewUserInputError(errors.New("invalid street name"))
 	}, th.CommandEqual("boom_input"), th.AnyMessageWithFrom())
 	router.Handle(func(*th.Context, telego.Update) error {
-		return boterr.NewAPIError(errors.New("telegram api down"))
+		return bot.NewAPIError(errors.New("telegram api down"))
 	}, th.CommandEqual("boom_api"), th.AnyMessageWithFrom())
 	router.Handle(func(*th.Context, telego.Update) error {
 		return errors.New("boom generic")

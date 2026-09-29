@@ -3,7 +3,6 @@ package bot
 import (
 	"errors"
 
-	boterr "github.com/005-bot/tg-bot-go/internal/bot/errors"
 	"github.com/mymmrac/telego"
 	th "github.com/mymmrac/telego/telegohandler"
 	"go.uber.org/zap"
@@ -32,10 +31,10 @@ func ErrorMiddleware(reply *Reply, logger *zap.Logger) th.Handler {
 //   - APIError: "🔧 Временная проблема с сервисом, пожалуйста, попробуйте позже"
 //   - any other error: "🚨 Системная ошибка - наша команда уведомлена"
 func MapError(err error) string {
-	if _, ok := errors.AsType[boterr.UserInputError](err); ok {
+	if _, ok := errors.AsType[UserInputError](err); ok {
 		return "⚠️ Ошибка ввода: " + err.Error()
 	}
-	if _, ok := errors.AsType[boterr.APIError](err); ok {
+	if _, ok := errors.AsType[APIError](err); ok {
 		return "🔧 Временная проблема с сервисом, пожалуйста, попробуйте позже"
 	}
 	return "🚨 Системная ошибка - наша команда уведомлена"

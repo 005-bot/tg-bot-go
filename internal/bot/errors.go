@@ -1,8 +1,4 @@
-// Package boterr defines user-facing error types for the Telegram bot.
-// Handlers wrap domain failures with these types; the global error
-// middleware maps them to verbatim Russian user messages (aiogram
-// error-handler parity).
-package boterr
+package bot
 
 // UserInputError marks errors caused by invalid user input. The middleware
 // replies with "⚠️ Ошибка ввода: {message}".
