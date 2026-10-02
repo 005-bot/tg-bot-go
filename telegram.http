@@ -1,0 +1,10 @@
+@baseUrl=https://api.telegram.org/bot{{$dotenv TELEGRAM__TOKEN}}
+
+###
+GET {{baseUrl}}/getUpdates HTTP/1.1
+
+###
+POST {{baseUrl}}/deleteWebhook HTTP/1.1
+Content-Type: application/json
+
+{}

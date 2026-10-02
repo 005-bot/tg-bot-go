@@ -6,7 +6,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/capcom6/go-project-template/internal/commands"
+	"github.com/005-bot/tg-bot-go/internal/commands"
 	"github.com/go-core-fx/healthfx"
 	"github.com/samber/lo"
 	"github.com/urfave/cli/v3"
@@ -14,9 +14,9 @@ import (
 
 func Run(version healthfx.Version) {
 	app := &cli.Command{
-		Name:           "go-project-template",
-		Usage:          "Example Go project with HTTP server and Telegram bot",
-		Description:    "Example Go project with HTTP server and Telegram bot",
+		Name:           "tg-bot-go",
+		Usage:          "Telegram bot service with HTTP server and Telegram bot",
+		Description:    "Telegram bot service with HTTP server and Telegram bot",
 		Version:        version.Version,
 		DefaultCommand: "serve",
 		Flags:          []cli.Flag{},

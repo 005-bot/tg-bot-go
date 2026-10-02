@@ -1,10 +1,13 @@
 package config
 
 import (
-	"github.com/capcom6/go-project-template/internal/example"
+	"github.com/005-bot/tg-bot-go/internal/bot"
+	"github.com/005-bot/tg-bot-go/internal/fsm"
+	"github.com/005-bot/tg-bot-go/internal/listener"
+	"github.com/005-bot/tg-bot-go/internal/storage"
 	"github.com/go-core-fx/fiberfx"
 	"github.com/go-core-fx/fiberfx/openapi"
-	"github.com/go-core-fx/sqlfx"
+	"github.com/go-core-fx/redisfx"
 	"github.com/go-core-fx/telegofx"
 	"go.uber.org/fx"
 )
@@ -30,23 +33,36 @@ func Module() fx.Option {
 			},
 			func(cfg Config) telegofx.Config {
 				return telegofx.Config{
-					Token: cfg.Telegram.Token,
+					Token:    cfg.Telegram.Token,
+					ProxyURL: cfg.Telegram.ProxyURL,
+					Mode:     cfg.Telegram.Mode,
 				}
 			},
-			func(cfg Config) sqlfx.Config {
-				return sqlfx.Config{
-					URL:             cfg.Database.URL,
-					ConnMaxIdleTime: cfg.Database.ConnMaxIdleTime,
-					ConnMaxLifetime: cfg.Database.ConnMaxLifetime,
-					MaxOpenConns:    cfg.Database.MaxOpenConns,
-					MaxIdleConns:    cfg.Database.MaxIdleConns,
+			func(cfg Config) bot.Config {
+				return bot.Config{
+					AdminID: int64(cfg.Admin.TelegramID),
+				}
+			},
+			func(cfg Config) redisfx.Config {
+				return redisfx.Config{
+					URL: cfg.Redis.URL,
+				}
+			},
+			func(cfg Config) storage.Config {
+				return storage.Config{
+					Prefix: cfg.Redis.Prefix,
+				}
+			},
+			func(cfg Config) fsm.Config {
+				return fsm.Config{
+					Prefix: cfg.Redis.Prefix,
+				}
+			},
+			func(cfg Config) listener.Config {
+				return listener.Config{
+					Prefix: cfg.Redis.Prefix,
 				}
 			},
 		),
-		fx.Provide(func(cfg Config) example.Config {
-			return example.Config{
-				Example: cfg.Example.Example,
-			}
-		}),
 	)
 }
