@@ -1,8 +1,8 @@
 package server
 
 import (
-	"github.com/capcom6/go-project-template/internal/server/docs"
-	"github.com/capcom6/go-project-template/internal/server/handlers/example"
+	"github.com/005-bot/tg-bot-go/internal/server/docs"
+	"github.com/005-bot/tg-bot-go/internal/server/webhook"
 	"github.com/go-core-fx/fiberfx"
 	"github.com/go-core-fx/fiberfx/handler"
 	"github.com/go-core-fx/fiberfx/health"
@@ -32,11 +32,15 @@ func Module() fx.Option {
 			openapi.NewHandler,
 			fx.Private,
 		),
-
 		fx.Provide(
-			fx.Annotate(example.New, fx.ResultTags(`group:"handlers"`)),
+			fx.Annotate(webhook.NewHandler, fx.ResultTags(`group:"handlers"`)),
 			fx.Private,
 		),
+
+		// fx.Provide(
+		// 	fx.Annotate(example.New, fx.ResultTags(`group:"handlers"`)),
+		// 	fx.Private,
+		// ),
 
 		fx.Invoke(
 			fx.Annotate(
