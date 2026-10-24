@@ -6,16 +6,17 @@
 package commands
 
 import (
-	"github.com/capcom6/go-project-template/internal/commands/example"
-	"github.com/capcom6/go-project-template/internal/commands/serve"
+	"github.com/005-bot/tg-bot-go/internal/commands/serve"
+	"github.com/005-bot/tg-bot-go/internal/commands/webhook"
 	"github.com/go-core-fx/healthfx"
 	"github.com/urfave/cli/v3"
 )
 
-// Commands returns all available CLI commands.
+// Commands returns all available CLI commands. The serve command is aliased
+// to run for parity with the Python CLI (tg-bot/app/__main__.py).
 func Commands(version healthfx.Version) []*cli.Command {
 	return []*cli.Command{
 		serve.Command(version),
-		example.Command(version),
+		webhook.Command(),
 	}
 }
