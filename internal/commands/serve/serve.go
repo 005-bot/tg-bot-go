@@ -4,17 +4,20 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/capcom6/go-project-template/internal/bot"
-	"github.com/capcom6/go-project-template/internal/config"
-	"github.com/capcom6/go-project-template/internal/db"
-	"github.com/capcom6/go-project-template/internal/example"
-	"github.com/capcom6/go-project-template/internal/server"
-	"github.com/go-core-fx/bunfx"
+	"github.com/005-bot/tg-bot-go/internal/bot"
+	"github.com/005-bot/tg-bot-go/internal/config"
+	"github.com/005-bot/tg-bot-go/internal/listener"
+	"github.com/005-bot/tg-bot-go/internal/notifier"
+	"github.com/005-bot/tg-bot-go/internal/server"
+	"github.com/005-bot/tg-bot-go/internal/state"
+	"github.com/005-bot/tg-bot-go/internal/storage"
+	"github.com/005-bot/tg-bot-go/internal/streetsdb"
+	"github.com/005-bot/tg-bot-go/internal/telegram"
 	"github.com/go-core-fx/fiberfx"
-	"github.com/go-core-fx/goosefx"
 	"github.com/go-core-fx/healthfx"
+	"github.com/go-core-fx/httpfx"
 	"github.com/go-core-fx/logger"
-	"github.com/go-core-fx/sqlfx"
+	"github.com/go-core-fx/redisfx"
 	"github.com/go-core-fx/telegofx"
 	"github.com/go-core-fx/validatorfx"
 	"github.com/urfave/cli/v3"
@@ -39,33 +42,38 @@ func run(ctx context.Context, version healthfx.Version) error {
 		logger.Module(),
 		logger.WithFxDefaultLogger(),
 		// badgerfx.Module(),
-		bunfx.Module(),
+		// bunfx.Module(),
 		// cachefx.Module(),
 		fiberfx.Module(),
 		// gocqlfx.Module(),
 		// gocqlxfx.Module(),
-		goosefx.Module(),
+		// goosefx.Module(),
 		// gormfx.Module(),
 		healthfx.Module(),
-		// httpfx.Module(),
+		httpfx.Module(),
 		// openaifx.Module(),
 		// openrouterfx.Module(),
-		// redisfx.Module(),
-		sqlfx.Module(),
+		redisfx.Module(),
+		// sqlfx.Module(),
 		// sqlxfx.Module(),
-		telegofx.Module(true),
+		telegofx.Module(telegofx.WithRouter(), telegofx.WithFSM(), telegofx.WithHealth()),
 		validatorfx.Module(),
 		// watermillfx.Module(),
 		//
 		// APP MODULES
 		config.Module(),
-		db.Module(),
+		telegram.Module(),
+		// db.Module(),
 		server.Module(),
 		bot.Module(),
+		storage.Module(),
+		state.Module(),
+		listener.Module(),
+		notifier.Module(),
+		streetsdb.Module(),
 		//
 		// BUSINESS MODULES
 		fx.Supply(version),
-		example.Module(true),
 
 		fx.Invoke(func(lc fx.Lifecycle, logger *zap.Logger) {
 			lc.Append(fx.Hook{
