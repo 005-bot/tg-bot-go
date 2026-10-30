@@ -11,21 +11,21 @@
 <!-- PROJECT LOGO -->
 <br />
 <div align="center">
-  <a href="https://github.com/capcom6/go-project-template">
+  <a href="https://github.com/005-bot/tg-bot-go">
     <img src="https://raw.githubusercontent.com/golang-samples/gopher-vector/master/gopher.png" alt="Logo" width="120" height="120">
   </a>
 
-<h3 align="center">go-project-template</h3>
+<h3 align="center">tg-bot-go</h3>
 
   <p align="center">
-    Opinionated Go service template with Fiber API, OpenAPI docs, Telegram bot wiring, health endpoints, and Fx-based modular DI.
+    Telegram bot that subscribes residents to utility outage notifications for their street.
     <br />
-    <a href="https://github.com/capcom6/go-project-template"><strong>Explore the docs »</strong></a>
+    <a href="https://github.com/005-bot/tg-bot-go"><strong>Explore the docs »</strong></a>
     <br />
     <br />
-    <a href="https://github.com/capcom6/go-project-template/issues">Report Bug</a>
+    <a href="https://github.com/005-bot/tg-bot-go/issues">Report Bug</a>
     ·
-    <a href="https://github.com/capcom6/go-project-template/issues">Request Feature</a>
+    <a href="https://github.com/005-bot/tg-bot-go/issues">Request Feature</a>
   </p>
 </div>
 
@@ -38,6 +38,7 @@
   - [Prerequisites](#prerequisites)
   - [Installation](#installation)
 - [Usage](#usage)
+- [Configuration](#configuration)
 - [Roadmap](#roadmap)
 - [Contributing](#contributing)
 - [License](#license)
@@ -49,15 +50,19 @@
 <!-- ABOUT THE PROJECT -->
 ## About The Project
 
-This repository is a production-oriented starter for backend services in Go. It ships with:
+The bot subscribes a resident to the utility outages of one street and sends an
+outage broadcast when the outages API publishes one.
 
-* HTTP server bootstrapped with Fiber and dependency injection via Uber Fx.
-* Version + health endpoints using `healthfx`.
-* Swagger/OpenAPI docs endpoint under `/api/v1/docs`.
-* Telegram bot integration (`/start` command handler included).
-* Modular business domain example with CLI commands (serve, one-shot tasks).
+* The resident picks a street with `/start` or `/filter`; the address parser
+  matches the typed text against the street database.
+* The subscription and the filter are stored in Redis.
+* Outages arrive over a Redis pub/sub channel. The listener decodes them, the
+  notifier formats the message and sends it to every subscriber whose street
+  filter matches.
+* `/feedback` forwards a message to the bot admin.
 
-Use this template when you want a fast path to shipping APIs and bot workflows with a clean module layout.
+The service is a Go port of the Python bot (`005-bot/tg-bot`) and keeps its
+behaviour command by command.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -70,6 +75,7 @@ Use this template when you want a fast path to shipping APIs and bot workflows w
 * [![CLI][cli-shield]][cli-url]
 * [![Swagger][swagger-shield]][swagger-url]
 * [![Telegram][telegram-shield]][telegram-url]
+* [![Redis][redis-shield]][redis-url]
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -78,14 +84,20 @@ Use this template when you want a fast path to shipping APIs and bot workflows w
 <!-- GETTING STARTED -->
 ## Getting Started
 
-Follow these steps to run the service locally.
+Follow these steps to run the bot locally.
 
 ### Prerequisites
 
-* Go 1.25+
+* Go 1.26+
   ```sh
   go version
   ```
+* A Redis instance for the subscriptions, the conversation state and the
+  outage channel
+  ```sh
+  docker run -d --name redis -p 6379:6379 redis:7-alpine
+  ```
+* A Telegram bot token from [@BotFather](https://core.telegram.org/bots)
 * `golangci-lint` (optional but recommended)
   ```sh
   golangci-lint version
@@ -99,18 +111,23 @@ Follow these steps to run the service locally.
 
 1. Clone the repo.
    ```sh
-   git clone https://github.com/capcom6/go-project-template.git
-   cd go-project-template
+   git clone https://github.com/005-bot/tg-bot-go.git
+   cd tg-bot-go
    ```
-2. Download dependencies.
+2. Create your local config from the template, then edit `.env` and set
+   `TELEGRAM__TOKEN`:
+   ```sh
+   cp .env.example .env
+   ```
+3. Download dependencies.
    ```sh
    make deps
    ```
-3. (Optional) Generate OpenAPI docs.
+4. (Optional) Generate OpenAPI docs.
    ```sh
    make gen
    ```
-4. Build the binary.
+5. Build the binary.
    ```sh
    make build
    ```
@@ -122,7 +139,7 @@ Follow these steps to run the service locally.
 <!-- USAGE EXAMPLES -->
 ## Usage
 
-Run the server (default command):
+Run the service (default command):
 
 ```sh
 go run .
@@ -138,26 +155,41 @@ CLI commands:
 
 ```sh
 go run . --help                     # list commands
-go run . serve                      # explicit serve
-go run . example                    # one-shot demo
+go run . serve                      # explicit serve (alias: run)
+go run . set-webhook <url>          # register the webhook URL with Telegram
 go run . --version                  # print version
 ```
 
-Default server address is `127.0.0.1:3000`.
+> **Webhook setup.** Set `TELEGRAM__MODE=webhook` before running
+> `set-webhook <url>`: in polling mode the webhook route answers 500, and
+> Telegram refuses long polling while a webhook is registered. To return to
+> polling, remove the webhook first (Bot API `deleteWebhook`) and set
+> `TELEGRAM__MODE=polling`.
 
-Helpful endpoints:
+The default server address is `127.0.0.1:3000`.
 
-* Health endpoints (via `healthfx`), typically under `/health`.
-* OpenAPI docs: `http://127.0.0.1:3000/api/v1/docs`.
+Endpoints:
 
-Configuration:
+| Endpoint                                               | Purpose                   |
+| ------------------------------------------------------ | ------------------------- |
+| `GET /health`                                          | health check              |
+| `GET /health/live`, `/health/ready`, `/health/startup` | health probes             |
+| `GET /metrics`                                         | Prometheus metrics        |
+| `GET /api/v1/docs`                                     | OpenAPI UI                |
+| `POST /api/v1/webhook`                                 | Telegram webhook receiver |
 
-* Environment variables are loaded via `go-core-fx/config`.
-* You can point to a YAML file using:
-  ```sh
-  export CONFIG_PATH=./config.local.yaml
-  ```
-* Telegram token is configured via the app config (`telegram.token`) and required to use bot handlers.
+The webhook route is registered in every mode, but only the webhook mode has a
+handler ready to accept a payload; in polling mode the route answers 500.
+
+Bot commands:
+
+| Command     | Purpose                                                                                |
+| ----------- | -------------------------------------------------------------------------------------- |
+| `/start`    | subscribe to outage notifications; accepts an optional deep-link payload with a street |
+| `/stop`     | unsubscribe                                                                            |
+| `/filter`   | pick a street filter interactively (type a street, confirm on a low-confidence match)  |
+| `/feedback` | forward a message to the bot admin                                                     |
+| `/help`     | print the command list                                                                 |
 
 Quality checks:
 
@@ -172,17 +204,60 @@ make coverage
 
 
 
+<!-- CONFIGURATION -->
+## Configuration
+
+Configuration is loaded in layers — later overrides earlier:
+
+1. a YAML file, when `CONFIG_PATH` points to one
+2. a `.env` file in the working directory
+3. process environment variables
+
+The `__` separator nests the keys.
+
+| Variable                                  | Default                  | Purpose                                                                                                                                     |
+| ----------------------------------------- | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `TELEGRAM__TOKEN`                         | —                        | **Required.** Bot API token; the service fails to start without it                                                                          |
+| `HTTP__ADDRESS`                           | `127.0.0.1:3000`         | HTTP listen address                                                                                                                         |
+| `HTTP__PROXY_HEADER`                      | `X-Forwarded-For`        | client IP header behind a proxy                                                                                                             |
+| `HTTP__PROXIES`                           | —                        | IPs/CIDR ranges trusted to set `HTTP__PROXY_HEADER` — JSON array in `.env` (commas are not split); the check is enabled only when non-empty |
+| `HTTP__OPENAPI__ENABLED`                  | `true`                   | serve the OpenAPI UI                                                                                                                        |
+| `HTTP__OPENAPI__PUBLIC_HOST`              | —                        | public host used in the generated docs                                                                                                      |
+| `HTTP__OPENAPI__PUBLIC_PATH`              | —                        | public path prefix for the docs route                                                                                                       |
+| `REDIS__URL`                              | `redis://localhost:6379` | Redis connection URL                                                                                                                        |
+| `REDIS__PREFIX`                           | `bot-005`                | key prefix for the subscriptions, the state and the outage channel                                                                          |
+| `TELEGRAM__PROXY_URL`                     | —                        | SOCKS5 proxy for the outgoing Telegram API calls; wins over `HTTP_PROXY`/`HTTPS_PROXY` when set                                             |
+| `TELEGRAM__TIMEOUT`                       | `60s`                    | bound on every outgoing Bot API request; must exceed the 8s `getUpdates` long-poll hold (startup validation)                               |
+| `TELEGRAM__MODE`                          | `polling`                | update delivery mode: `polling` or `webhook`                                                                                                |
+| `STREETS_DB__PATH`                        | — (embedded)             | external `streets.db` file; drop in a newer database without rebuilding — empty keeps the embedded one                                      |
+| `ADMIN__TELEGRAM_ID`                      | `0`                      | admin chat for the new subscriptions and the feedback; `0` disables them                                                                    |
+| `CONFIG_PATH`                             | —                        | YAML base config file; **process env only** — a `.env` entry is ignored                                                                     |
+| `DEBUG`                                   | `false`                  | development logger instead of the production one; **process env only**                                                                      |
+| `HTTP_PROXY` / `HTTPS_PROXY` / `NO_PROXY` | —                        | outbound proxy for the Telegram API client; **process env only**                                                                            |
+
+See `.env.example` for the annotated list.
+
+> **Webhook security.** The webhook route performs **no request authentication**:
+> the `X-Telegram-Bot-Api-Secret-Token` check is left to the application and is
+> not implemented. A caller that reaches the route can submit forged updates.
+> Keep the HTTP server behind a reverse proxy that only forwards Telegram
+> traffic, and prefer the default polling mode.
+
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
+
+
+
 <!-- ROADMAP -->
 ## Roadmap
 
-- [x] Fiber API scaffold
-- [x] OpenAPI + Swagger integration
-- [x] Telegram bot wiring
-- [ ] Database module integration
-- [ ] Auth middleware and RBAC
-- [ ] CI release pipeline hardening
+- [x] Telegram bot commands and the street subscription flow
+- [x] Redis-backed subscriptions and conversation state
+- [x] Outage broadcasts over the Redis pub/sub channel
+- [x] Webhook delivery mode
+- [ ] Telegram webhook secret token validation
+- [ ] Outage details in the notification
 
-See the [open issues](https://github.com/capcom6/go-project-template/issues) for a full list of proposed features (and known issues).
+See the [open issues](https://github.com/005-bot/tg-bot-go/issues) for a full list of proposed features (and known issues).
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -220,7 +295,7 @@ Distributed under the Apache 2.0 License. See `LICENSE` for more information.
 
 Maintainer: [@capcom6](https://github.com/capcom6)
 
-Project Link: [https://github.com/capcom6/go-project-template](https://github.com/capcom6/go-project-template)
+Project Link: [https://github.com/005-bot/tg-bot-go](https://github.com/005-bot/tg-bot-go)
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -240,17 +315,17 @@ Project Link: [https://github.com/capcom6/go-project-template](https://github.co
 
 
 <!-- MARKDOWN LINKS & IMAGES -->
-[contributors-shield]: https://img.shields.io/github/contributors/capcom6/go-project-template.svg?style=for-the-badge
-[contributors-url]: https://github.com/capcom6/go-project-template/graphs/contributors
-[forks-shield]: https://img.shields.io/github/forks/capcom6/go-project-template.svg?style=for-the-badge
-[forks-url]: https://github.com/capcom6/go-project-template/network/members
-[stars-shield]: https://img.shields.io/github/stars/capcom6/go-project-template.svg?style=for-the-badge
-[stars-url]: https://github.com/capcom6/go-project-template/stargazers
-[issues-shield]: https://img.shields.io/github/issues/capcom6/go-project-template.svg?style=for-the-badge
-[issues-url]: https://github.com/capcom6/go-project-template/issues
-[license-shield]: https://img.shields.io/github/license/capcom6/go-project-template.svg?style=for-the-badge
-[license-url]: https://github.com/capcom6/go-project-template/blob/master/LICENSE
-[go-shield]: https://img.shields.io/badge/go-1.25%2B-00ADD8?style=for-the-badge&logo=go
+[contributors-shield]: https://img.shields.io/github/contributors/005-bot/tg-bot-go.svg?style=for-the-badge
+[contributors-url]: https://github.com/005-bot/tg-bot-go/graphs/contributors
+[forks-shield]: https://img.shields.io/github/forks/005-bot/tg-bot-go.svg?style=for-the-badge
+[forks-url]: https://github.com/005-bot/tg-bot-go/network/members
+[stars-shield]: https://img.shields.io/github/stars/005-bot/tg-bot-go.svg?style=for-the-badge
+[stars-url]: https://github.com/005-bot/tg-bot-go/stargazers
+[issues-shield]: https://img.shields.io/github/issues/005-bot/tg-bot-go.svg?style=for-the-badge
+[issues-url]: https://github.com/005-bot/tg-bot-go/issues
+[license-shield]: https://img.shields.io/github/license/005-bot/tg-bot-go.svg?style=for-the-badge
+[license-url]: https://github.com/005-bot/tg-bot-go/blob/master/LICENSE
+[go-shield]: https://img.shields.io/badge/go-1.26%2B-00ADD8?style=for-the-badge&logo=go
 [go-url]: https://go.dev/
 [fiber-shield]: https://img.shields.io/badge/Fiber-v2-00b894?style=for-the-badge
 [fiber-url]: https://github.com/gofiber/fiber
@@ -262,3 +337,5 @@ Project Link: [https://github.com/capcom6/go-project-template](https://github.co
 [swagger-url]: https://github.com/swaggo/swag
 [telegram-shield]: https://img.shields.io/badge/Telegram-Bot-26A5E4?style=for-the-badge&logo=telegram
 [telegram-url]: https://core.telegram.org/bots
+[redis-shield]: https://img.shields.io/badge/Redis-cache-FF4438?style=for-the-badge&logo=redis
+[redis-url]: https://redis.io
