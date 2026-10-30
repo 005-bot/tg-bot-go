@@ -10,9 +10,8 @@ const docTemplate = `{
         "description": "{{escape .Description}}",
         "title": "{{.Title}}",
         "contact": {
-            "name": "API Support",
-            "url": "https://github.com/capcom6",
-            "email": "i@capcom.me"
+            "name": "005-bot",
+            "url": "https://github.com/005-bot/tg-bot-go"
         },
         "license": {
             "name": "Apache 2.0",
@@ -23,71 +22,27 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
-        "/example": {
-            "get": {
-                "description": "Returns a greeting message and example value",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "example"
-                ],
-                "summary": "Get example",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/example.Response"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/fiberfx.ErrorResponse"
-                        }
-                    }
-                }
-            },
+        "/webhook": {
             "post": {
-                "description": "Creates an example using the provided request payload",
-                "consumes": [
-                    "application/json"
-                ],
+                "description": "Accepts a raw Telegram webhook update and pushes it into the ingestion pipeline. Polled updates are not sent here, so the route answers 500 while the bot runs in polling mode. The route performs no request authentication.",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
-                    "example"
+                    "webhook"
                 ],
-                "summary": "Create example",
-                "parameters": [
-                    {
-                        "description": "Request payload",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/example.Request"
-                        }
-                    }
-                ],
+                "summary": "Handle Telegram update",
                 "responses": {
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/example.Response"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/fiberfx.ErrorResponse"
+                            "$ref": "#/definitions/webhook.Response"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/fiberfx.ErrorResponse"
+                            "$ref": "#/definitions/webhook.ErrorResponse"
                         }
                     }
                 }
@@ -95,37 +50,19 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "example.Request": {
+        "webhook.ErrorResponse": {
             "type": "object",
-            "required": [
-                "value"
-            ],
             "properties": {
-                "value": {
+                "error": {
                     "type": "string"
                 }
             }
         },
-        "example.Response": {
+        "webhook.Response": {
             "type": "object",
             "properties": {
-                "message": {
-                    "type": "string"
-                },
-                "value": {
-                    "type": "string"
-                }
-            }
-        },
-        "fiberfx.ErrorResponse": {
-            "type": "object",
-            "properties": {
-                "code": {
-                    "type": "integer"
-                },
-                "details": {},
-                "message": {
-                    "type": "string"
+                "ok": {
+                    "type": "boolean"
                 }
             }
         }
@@ -138,8 +75,8 @@ var SwaggerInfo = &swag.Spec{
 	Host:             "localhost:3000",
 	BasePath:         "/api/v1",
 	Schemes:          []string{},
-	Title:            "Project API",
-	Description:      "Project API documentation",
+	Title:            "Telegram Bot API",
+	Description:      "Telegram bot service API",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
 	LeftDelim:        "{{",

@@ -1,10 +1,16 @@
 package config
 
 import (
-	"github.com/capcom6/go-project-template/internal/example"
+	"github.com/005-bot/tg-bot-go/internal/bot/notificator"
+	"github.com/005-bot/tg-bot-go/internal/listener"
+	"github.com/005-bot/tg-bot-go/internal/state"
+	"github.com/005-bot/tg-bot-go/internal/storage"
+	"github.com/005-bot/tg-bot-go/internal/streetsdb"
+	"github.com/005-bot/tg-bot-go/internal/telegram"
 	"github.com/go-core-fx/fiberfx"
 	"github.com/go-core-fx/fiberfx/openapi"
-	"github.com/go-core-fx/sqlfx"
+	"github.com/go-core-fx/httpfx"
+	"github.com/go-core-fx/redisfx"
 	"github.com/go-core-fx/telegofx"
 	"go.uber.org/fx"
 )
@@ -28,25 +34,53 @@ func Module() fx.Option {
 					PublicPath: cfg.HTTP.OpenAPI.PublicPath,
 				}
 			},
+			func() httpfx.Config {
+				return httpfx.Config{}
+			},
 			func(cfg Config) telegofx.Config {
 				return telegofx.Config{
 					Token: cfg.Telegram.Token,
+					Mode:  cfg.Telegram.Mode,
 				}
 			},
-			func(cfg Config) sqlfx.Config {
-				return sqlfx.Config{
-					URL:             cfg.Database.URL,
-					ConnMaxIdleTime: cfg.Database.ConnMaxIdleTime,
-					ConnMaxLifetime: cfg.Database.ConnMaxLifetime,
-					MaxOpenConns:    cfg.Database.MaxOpenConns,
-					MaxIdleConns:    cfg.Database.MaxIdleConns,
+			func(cfg Config) redisfx.Config {
+				return redisfx.Config{
+					URL: cfg.Redis.URL,
 				}
 			},
 		),
-		fx.Provide(func(cfg Config) example.Config {
-			return example.Config{
-				Example: cfg.Example.Example,
-			}
-		}),
+		fx.Provide(
+			func(cfg Config) storage.Config {
+				return storage.Config{
+					Prefix: cfg.Redis.Prefix,
+				}
+			},
+			func(cfg Config) state.Config {
+				return state.Config{
+					Prefix: cfg.Redis.Prefix,
+				}
+			},
+			func(cfg Config) listener.Config {
+				return listener.Config{
+					Prefix: cfg.Redis.Prefix,
+				}
+			},
+			func(cfg Config) notificator.Config {
+				return notificator.Config{
+					AdminID: int64(cfg.Admin.TelegramID),
+				}
+			},
+			func(cfg Config) streetsdb.Config {
+				return streetsdb.Config{
+					Path: cfg.StreetsDB.Path,
+				}
+			},
+			func(cfg Config) telegram.Config {
+				return telegram.Config{
+					ProxyURL: cfg.Telegram.ProxyURL,
+					Timeout:  cfg.Telegram.Timeout,
+				}
+			},
+		),
 	)
 }
